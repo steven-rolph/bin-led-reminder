@@ -243,10 +243,32 @@ is slow and can OOM on the Pi Zero 2.
 
 ## Known issues / tech debt
 
+- 🔴 **`test_leds.py:129` references non-existent `reminder_day` key** — the
+  test does `schedule['reminder_day']` but `detect_collection_schedule()` never
+  included that key (it was only in the stale docstring). The integration test
+  crashes with `KeyError` whenever a schedule is found. Fix: remove the
+  `reminder_day` line from the test output block.
+- 🟡 **`fromisoformat()` calls without error handling** — `should_update_data`
+  (line ~191), `get_next_collection` (line ~205), and `get_this_weeks_collections`
+  (line ~222) all call `datetime.fromisoformat()` on `date_parsed` values from
+  the schedule JSON with no `try/except`. A malformed date string inside an
+  otherwise valid JSON would crash the service. Fix: wrap in `try/except
+  ValueError` and treat as missing data (trigger re-scrape or skip entry).
+- 🟡 **`_recalculate_days_until` in `main.py` returns `0` on parse failure** —
+  a `ValueError` from `strptime` silently returns `0`, which the UI displays as
+  "today". Fix: return `None` on failure and filter those entries out.
 - 🟢 **No mixed-colour indication** — when both Blue and Green bins are due on
   the same collection date only `bins_due[0]` drives the LED colour. In practice
   the council alternates them weekly so this hasn't occurred, but it's not
   handled.
+- 🟢 **`manage.sh` uses a relative path for venv activation** — `source
+  ../blinkt-env/bin/activate` works when run from `bin-led-reminder/` but fails
+  silently if invoked from a different directory. Low real-world risk given the
+  standard SSH workflow.
+- 🟢 **No range validation on `led_brightness` in the web UI** — the `PATCH
+  /api/config` endpoint accepts any numeric value. An out-of-range brightness
+  could cause unexpected blinkt behaviour. Fix: clamp or validate to 0.0–1.0 in
+  `main.py` before writing to config.
 
 ---
 
