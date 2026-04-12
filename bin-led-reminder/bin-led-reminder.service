@@ -1,0 +1,27 @@
+[Unit]
+Description=Bin Collection LED Reminder Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pizero2
+Group=pizero2
+WorkingDirectory=/home/pizero2/blinkt-projects/bin-led-reminder
+ExecStart=/home/pizero2/blinkt-projects/blinkt-env/bin/python /home/pizero2/blinkt-projects/bin-led-reminder/bin_led_service.py
+Restart=always
+RestartSec=30
+
+# Environment
+Environment=PYTHONPATH=/home/pizero2/blinkt-projects/bin-led-reminder
+
+# Logging
+StandardOutput=append:/var/log/bin-led-reminder.log
+StandardError=append:/var/log/bin-led-reminder.log
+
+# Security (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

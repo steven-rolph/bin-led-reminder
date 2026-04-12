@@ -1,0 +1,38 @@
+# ── Runtime data ──────────────────────────────────────────────────────────────
+# These files are generated at runtime on the Pi and must never be committed.
+# recycling_schedule.json contains your UPRN; error_state.json is transient.
+recycling_schedule.json
+error_state.json
+
+# ── Config ────────────────────────────────────────────────────────────────────
+# config.json contains your home address UPRN. Commit config.example.json
+# (with UPRN blanked) instead, and keep the real file local.
+config.json
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environment ───────────────────────────────────────────────────────
+# The shared venv lives one level above the repo (~/blinkt-projects/blinkt-env)
+# so it won't be picked up, but guard against any local venv too.
+blinkt-env/
+venv/
+.venv/
+env/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
