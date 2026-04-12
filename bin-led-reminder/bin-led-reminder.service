@@ -7,13 +7,13 @@ Wants=network.target
 Type=simple
 User=pizero2
 Group=pizero2
-WorkingDirectory=/home/pizero2/blinkt-projects/bin-led-reminder
-ExecStart=/home/pizero2/blinkt-projects/blinkt-env/bin/python /home/pizero2/blinkt-projects/bin-led-reminder/bin_led_service.py
+WorkingDirectory=/home/pizero2/blinkt-projects/bin-led-reminder/bin-led-reminder
+ExecStart=/home/pizero2/blinkt-projects/blinkt-env/bin/python /home/pizero2/blinkt-projects/bin-led-reminder/bin-led-reminder/bin_led_service.py
 Restart=always
 RestartSec=30
 
 # Environment
-Environment=PYTHONPATH=/home/pizero2/blinkt-projects/bin-led-reminder
+Environment=PYTHONPATH=/home/pizero2/blinkt-projects/bin-led-reminder/bin-led-reminder
 
 # Logging
 StandardOutput=append:/var/log/bin-led-reminder.log
