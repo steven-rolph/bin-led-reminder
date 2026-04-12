@@ -1,0 +1,8 @@
+{
+  "uprn": "YOUR_UPRN_HERE",
+  "base_url": "https://self.eastcambs.gov.uk/appshost/firmstep/self/apps/custompage/bincollections",
+  "update_interval_weeks": 2,
+  "check_interval_hours": 1,
+  "led_brightness": 0.1,
+  "log_level": "INFO"
+}
