@@ -174,7 +174,7 @@ directly. A service restart is required for the new values to take effect.
 
 ## Design principles
 
-- **Core service stability above all else.** The LED service runs as a systemd
+- **Core service stability above all else.** The LED service runs as a `systemd`
   unit and must never be destabilised by changes to the web layer.
 - **Structural solutions over runtime workarounds.** For example, test-flash
   controls in the web UI are disabled while the LED service is running,
