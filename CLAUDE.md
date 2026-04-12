@@ -243,31 +243,6 @@ is slow and can OOM on the Pi Zero 2.
 
 ## Known issues / tech debt
 
-- 🔴 **`load_data` doesn't catch `JSONDecodeError`** — if `recycling_schedule.json`
-  is partially written during a power cut the file will be corrupt. The service
-  enters error state and retries every 5 minutes but will never self-recover
-  because it keeps failing to parse the same corrupt file. Fix: catch
-  `json.JSONDecodeError` in `load_data` and return `None`, which triggers a
-  fresh scrape.
-- 🟡 **`load_config` doesn't catch `JSONDecodeError`** — if `config.json` is
-  malformed the service crashes at startup before logging is set up, producing a
-  raw traceback. Fix: catch `json.JSONDecodeError` alongside `FileNotFoundError`
-  and fall back to defaults.
-- 🟡 **Stale docstring in `detect_collection_schedule`** — still mentions
-  `reminder_day` in the returns description, which was removed. Cosmetic but
-  misleading.
-- 🟡 **Stale comment in `update_led_display`** — says "Tuesday 00:00 until
-  Wednesday 01:00" but this only describes the normal-week case; the bank
-  holiday branch isn't reflected.
-- 🟢 **Truncated User-Agent string in `fetch_data`** — the UA string ends at
-  `AppleWebKit/537.36` mid-sentence. Not currently causing failures but is
-  malformed.
-- 🟢 **Invalid log level fails silently** — if `log_level` in `config.json` is
-  an unrecognised string, `getattr` returns `None` and logging silently defaults
-  to WARNING with no indication of the problem.
-- 🟢 **`self.running = False` in `shutdown()` is dead code** — `sys.exit(0)` is
-  called on the line before so the assignment is never reached. Harmless but
-  misleading.
 - 🟢 **No mixed-colour indication** — when both Blue and Green bins are due on
   the same collection date only `bins_due[0]` drives the LED colour. In practice
   the council alternates them weekly so this hasn't occurred, but it's not
