@@ -29,23 +29,23 @@ class BinLEDService:
 
     def load_config(self, config_file):
         """Load configuration from JSON file"""
+        default_config = {
+            "uprn": "10095400001",
+            "base_url": "https://self.eastcambs.gov.uk/appshost/firmstep/self/apps/custompage/bincollections",
+            "update_interval_weeks": 2,
+            "check_interval_hours": 1,
+            "led_brightness": 0.1,
+            "log_level": "INFO"
+        }
         try:
             with open(config_file, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            # Default configuration
-            default_config = {
-                "uprn": "10095400001",
-                "base_url": "https://self.eastcambs.gov.uk/appshost/firmstep/self/apps/custompage/bincollections",
-                "update_interval_weeks": 2,
-                "check_interval_hours": 1,
-                "led_brightness": 0.1,
-                "log_level": "INFO"
-            }
-
             with open(config_file, 'w') as f:
                 json.dump(default_config, f, indent=2)
-
+            return default_config
+        except json.JSONDecodeError as e:
+            print(f"config.json is malformed ({e}) — falling back to defaults", file=sys.stderr)
             return default_config
 
     def setup_logging(self):
@@ -53,7 +53,11 @@ class BinLEDService:
         log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
 
-        log_level = getattr(logging, self.config.get("log_level", "INFO"))
+        level_name = self.config.get("log_level", "INFO").upper()
+        log_level = getattr(logging, level_name, None)
+        if log_level is None:
+            log_level = logging.INFO
+            print(f"Unrecognised log_level '{level_name}' in config — defaulting to INFO", file=sys.stderr)
 
         logging.basicConfig(
             level=log_level,
@@ -77,7 +81,11 @@ class BinLEDService:
         for attempt in range(retry_attempts):
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    'User-Agent': (
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                        'AppleWebKit/537.36 (KHTML, like Gecko) '
+                        'Chrome/120.0.0.0 Safari/537.36'
+                    )
                 }
                 response = requests.get(url, headers=headers, timeout=10)
                 response.raise_for_status()
@@ -170,6 +178,9 @@ class BinLEDService:
         except FileNotFoundError:
             self.logger.warning("No existing data file found")
             return None
+        except json.JSONDecodeError:
+            self.logger.error("recycling_schedule.json is corrupt — will re-scrape")
+            return None
 
     def should_update_data(self):
         """Check if data needs updating (every 2 weeks)"""
@@ -225,7 +236,7 @@ class BinLEDService:
     def detect_collection_schedule(self):
         """
         Smart detection of collection day and reminder day
-        Returns dict with collection_day, reminder_day, and bins_due
+        Returns dict with collection_day, bins_due, and collection_date
         """
         next_collection = self.get_next_collection()
         if not next_collection:
