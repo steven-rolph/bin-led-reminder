@@ -60,13 +60,13 @@ def _read_json(path: Path):
         return json.load(f)
 
 
-def _recalculate_days_until(date_str: str) -> int:
+def _recalculate_days_until(date_str: str) -> int | None:
     """Parse a date string like 'Wed - 25 Mar 2026' and return days from today."""
     try:
         parsed = datetime.strptime(date_str, "%a - %d %b %Y").date()
         return (parsed - date.today()).days
     except ValueError:
-        return 0
+        return None
 
 
 def _leds_active(collections: list) -> bool:
@@ -131,7 +131,7 @@ def get_schedule():
     collections = []
     for col in data.get("collections", []):
         days = _recalculate_days_until(col["date"])
-        if days < 0:
+        if days is None or days < 0:
             continue
         collections.append({
             "date": col["date"],
@@ -160,7 +160,7 @@ def get_status():
         if col.get("bin_type") == "Black Bag":
             continue
         days = _recalculate_days_until(col["date"])
-        if days >= 0:
+        if days is not None and days >= 0:
             next_collection = {
                 "date": col["date"],
                 "bin_type": col["bin_type"],
