@@ -31,12 +31,14 @@ bin-led-reminder/          ← repo root
 │
 ├── bin-led-reminder/      ← core LED service (always running)
 │   ├── bin_led_service.py
+│   ├── constants.py       ← LED colour definitions (single source of truth)
 │   ├── config.example.json
 │   ├── requirements.txt
 │   ├── install.sh
 │   ├── manage.sh
 │   └── tests/
-│       └── test_leds.py
+│       ├── test_leds.py   ← Pi hardware test (requires blinkt)
+│       └── test_colours.py ← unit tests (runs on any machine)
 │
 └── bin-led-webui/         ← optional dashboard (start on demand)
     ├── main.py
@@ -171,7 +173,7 @@ changes, then restart.
 | `GET` | `/api/config` | Current config (UPRN and base\_url omitted) |
 | `PATCH` | `/api/config` | Update editable config keys |
 | `GET` | `/api/logs?lines=50` | Last N lines of the LED service log (max 200) |
-| `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` |
+| `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` / `force-update` |
 
 ---
 

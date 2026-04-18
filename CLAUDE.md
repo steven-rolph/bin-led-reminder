@@ -24,6 +24,7 @@ bin-led-reminder/          ← repo root
 │
 ├── bin-led-reminder/      ← core LED service
 │   ├── bin_led_service.py
+│   ├── constants.py       ← LED colour definitions (single source of truth)
 │   ├── bin-led-reminder.service
 │   ├── config.example.json
 │   ├── config.json        ← gitignored (contains UPRN)
@@ -31,7 +32,8 @@ bin-led-reminder/          ← repo root
 │   ├── install.sh
 │   ├── manage.sh
 │   └── tests/
-│       └── test_leds.py
+│       ├── test_leds.py   ← Pi hardware test (requires blinkt)
+│       └── test_colours.py ← unit tests (runs on any machine, mocks blinkt)
 │
 └── bin-led-webui/         ← optional dashboard
     ├── main.py
@@ -163,9 +165,9 @@ There is no code generation or shared source — these must be kept in sync manu
 | `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` / `force-update` |
 | `POST` | `/api/leds/test` | Flash LEDs a given colour; 409 if LED service is running, 503 in dev mode |
 
-The `POST /api/leds/test` endpoint blocks for ~3 s. Test flash buttons in the
-web UI are structurally disabled while the LED service is running to prevent SPI
-bus contention.
+The `POST /api/leds/test` endpoint blocks for ~3 s. The test LED colour picker
+in the web UI is structurally disabled while the LED service is running to
+prevent SPI bus contention.
 
 ---
 
