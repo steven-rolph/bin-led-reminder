@@ -35,7 +35,9 @@ class BinLEDService:
             "update_interval_weeks": 2,
             "check_interval_hours": 1,
             "led_brightness": 0.1,
-            "log_level": "INFO"
+            "log_level": "INFO",
+            "reminder_start_hours_before": 24,
+            "reminder_end_hours_after": 1,
         }
         try:
             with open(config_file, 'r') as f:
@@ -300,10 +302,10 @@ class BinLEDService:
 
         now = datetime.now()
 
-        # Reminder window: midnight the day before collection → 01:00 on collection day
+        # Reminder window: configurable hours before midnight of collection day → configurable hours after
         collection_dt = datetime.combine(schedule['collection_date'], datetime.min.time())
-        reminder_start = collection_dt - timedelta(days=1)
-        reminder_end = collection_dt + timedelta(hours=1)
+        reminder_start = collection_dt - timedelta(hours=self.config.get('reminder_start_hours_before', 24))
+        reminder_end = collection_dt + timedelta(hours=self.config.get('reminder_end_hours_after', 1))
         should_display = reminder_start <= now < reminder_end
         
         if should_display:

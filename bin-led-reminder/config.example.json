@@ -4,5 +4,7 @@
   "update_interval_weeks": 2,
   "check_interval_hours": 1,
   "led_brightness": 0.1,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "reminder_start_hours_before": 24,
+  "reminder_end_hours_after": 1
 }
