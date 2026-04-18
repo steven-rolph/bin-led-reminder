@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import logging
 import blinkt
+from constants import BIN_COLOURS, COLOUR_ERROR
 
 class BinLEDService:
     def __init__(self, config_file="config.json"):
@@ -287,8 +288,8 @@ class BinLEDService:
 
         self.logger.error(f"Error state set: {error_type} - {error_message}")
 
-        # Set all LEDs to red
-        blinkt.set_all(255, 0, 0, self.config['led_brightness'])
+        # Set all LEDs to error colour
+        blinkt.set_all(*COLOUR_ERROR, self.config['led_brightness'])
         blinkt.show()
 
     def clear_error_state(self):
@@ -327,19 +328,16 @@ class BinLEDService:
             if bins_due:
                 self.logger.info(f"Reminder active! Bins due: {bins_due}")
                 
-                # Determine LED color based on bin type
                 primary_bin = bins_due[0]
-                
-                if "Blue" in primary_bin:
-                    blinkt.set_all(0, 0, 255, self.config['led_brightness'])
-                elif "Green" in primary_bin or "Brown" in primary_bin:
-                    blinkt.set_all(0, 255, 0, self.config['led_brightness'])
+                colour = BIN_COLOURS.get(primary_bin)
+                if colour:
+                    blinkt.set_all(*colour, self.config['led_brightness'])
+                    blinkt.show()
+                    self.logger.info(f"LEDs set for {primary_bin}")
                 else:
-                    self.logger.warning(f"Unrecognised bin type '{primary_bin}' — clearing LEDs")
-                    blinkt.clear()
-
-                blinkt.show()
-                self.logger.info(f"LEDs set for {primary_bin}")
+                    self.logger.error(f"Unrecognised bin type '{primary_bin}' — treating as error")
+                    blinkt.set_all(*COLOUR_ERROR, self.config['led_brightness'])
+                    blinkt.show()
             else:
                 blinkt.clear()
                 blinkt.show()

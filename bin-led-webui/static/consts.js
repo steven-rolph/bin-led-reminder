@@ -10,6 +10,13 @@ export const COLOUR_ERROR      = '#ef4444';  // error state, service stopped, fl
 export const COLOUR_LEDS_ACTIVE = '#facc15';  // yellow dot when LEDs are on
 // LEDs-off dot → COLOUR_BIN_BLACK_BAG
 
+// ─── General palette ──────────────────────────────────────────────────────────
+export const COLOUR_ORANGE = '#ffa500';
+export const COLOUR_PURPLE = '#800080';
+export const COLOUR_PINK   = '#ff1493';
+export const COLOUR_CYAN   = '#00ffff';
+export const COLOUR_YELLOW = '#ffff00';
+
 // ─── LED visualiser ────────────────────────────────────────────────────────────
 export const COLOUR_LED_OFF    = '#374151';  // dark square when LEDs are off
 export const COLOUR_FLASH_WHITE = '#ffffff';  // white flash / unknown bin fallback
@@ -29,17 +36,25 @@ export const COLOUR_DAYS_BADGE          = '#e5e7eb';  // days badge text
 export const COLOUR_LOG_BG              = '#1a1a2e';  // log container background fallback
 
 // ─── Lookup maps ───────────────────────────────────────────────────────────────
+// Keys must match bin_type strings in recycling_schedule.json exactly.
+// Keep in sync with BIN_COLOURS in bin-led-reminder/constants.py.
 export const BIN_COLOURS = {
-  'Blue Bin':         COLOUR_BIN_BLUE,
+  'Blue Bin':           COLOUR_BIN_BLUE,
   'Green or Brown Bin': COLOUR_BIN_GREEN,
-  'Black Bag':        COLOUR_BIN_BLACK_BAG,
+  'Black Bag':          COLOUR_BIN_BLACK_BAG,
 };
 
+// Keep in sync with TEST_COLOURS in bin-led-webui/main.py.
 export const TEST_COLOUR_HEX = {
-  blue:  COLOUR_BIN_BLUE,
-  green: COLOUR_BIN_GREEN,
-  red:   COLOUR_ERROR,
-  white: COLOUR_FLASH_WHITE,
+  blue:   COLOUR_BIN_BLUE,
+  green:  COLOUR_BIN_GREEN,
+  red:    COLOUR_ERROR,
+  white:  COLOUR_FLASH_WHITE,
+  orange: COLOUR_ORANGE,
+  purple: COLOUR_PURPLE,
+  pink:   COLOUR_PINK,
+  cyan:   COLOUR_CYAN,
+  yellow: COLOUR_YELLOW,
 };
 
 // ─── Apply as CSS custom properties ────────────────────────────────────────────
