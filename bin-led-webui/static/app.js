@@ -122,6 +122,7 @@ function UpcomingCollections({ schedule }) {
 function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
   const [busy, setBusy] = useState(null);
   const [message, setMessage] = useState(null);
+  const [selectedColour, setSelectedColour] = useState(Object.keys(TEST_COLOUR_HEX)[0]);
 
   async function handleAction(action) {
     const destructive = action === 'stop' || action === 'restart' || action === 'clear-errors';
@@ -178,17 +179,32 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
         </p>
       `}
       <p class="test-led-label">Test LEDs</p>
-      <div>
-        ${Object.entries(TEST_COLOUR_HEX).map(([colour, hex]) => html`
-          <button
-            key=${colour}
-            class="outline btn-sm"
-            style=${{ borderColor: hex, color: hex }}
-            aria-busy=${busy === `test-${colour}`}
-            disabled=${busy !== null || serviceRunning !== false}
-            onClick=${() => handleTestFlash(colour)}
-          >Flash ${colour.charAt(0).toUpperCase() + colour.slice(1)}</button>
-        `)}
+      <div style=${{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style=${{ display: 'flex', gap: '4px' }}>
+          ${[0, 1, 2].map(i => html`
+            <div key=${i} class="led-mini" style=${{
+              backgroundColor: TEST_COLOUR_HEX[selectedColour],
+              boxShadow: `0 0 6px 2px ${TEST_COLOUR_HEX[selectedColour]}`,
+            }}></div>
+          `)}
+        </div>
+        <select
+          value=${selectedColour}
+          style=${{ margin: 0, width: 'auto' }}
+          disabled=${busy !== null || serviceRunning !== false}
+          onChange=${e => setSelectedColour(e.target.value)}
+        >
+          ${Object.entries(TEST_COLOUR_HEX).map(([name]) => html`
+            <option key=${name} value=${name}>${name.charAt(0).toUpperCase() + name.slice(1)}</option>
+          `)}
+        </select>
+        <button
+          class="outline btn-sm"
+          style=${{ borderColor: TEST_COLOUR_HEX[selectedColour], color: TEST_COLOUR_HEX[selectedColour], margin: 0 }}
+          aria-busy=${busy === `test-${selectedColour}`}
+          disabled=${busy !== null || serviceRunning !== false}
+          onClick=${() => handleTestFlash(selectedColour)}
+        >Test LEDs</button>
       </div>
       ${serviceRunning !== false && html`
         <small style=${{ color: COLOUR_BIN_BLACK_BAG }}>Stop the LED service to enable test controls</small>
