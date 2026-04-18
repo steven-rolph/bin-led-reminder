@@ -246,14 +246,41 @@ is slow and can OOM on the Pi Zero 2.
 - 🟢 **No mixed-colour indication** — when both Blue and Green bins are due on
   the same collection date only `bins_due[0]` drives the LED colour. In practice
   the council alternates them weekly so this hasn't occurred, but it's not
-  handled.
+  handled. Could pulse/alternate LEDs instead.
 - 🟢 **`manage.sh` uses a relative path for venv activation** — `source
   ../blinkt-env/bin/activate` works when run from `bin-led-reminder/` but fails
-  silently if invoked from a different directory. Low real-world risk given the
-  standard SSH workflow.
+  silently if invoked from a different directory. Fix with `$SCRIPT_DIR`. Low
+  real-world risk given the standard SSH workflow.
 
 ---
 
 ## Known gaps / planned work
 
-- No items currently tracked.
+### Standard priority
+
+- **Night dimming** — auto-reduce `led_brightness` during a configurable quiet
+  window (e.g. 11pm–7am) via two new config fields (`night_dim_start`,
+  `night_dim_end`, `night_dim_brightness`). Relevant given Pi Zero 2 power
+  concerns at higher brightness.
+- **Schedule staleness indicator** — the web UI shows next collection but not
+  when `recycling_schedule.json` was last scraped. Expose `last_scraped` in
+  `GET /api/status` and surface it in the UI to catch silent scrape failures
+  before the error LED fires.
+- **Black Bag opt-in** — Black Bag collections are hardcoded-ignored. A
+  `ignore_black_bag` config flag (default `true`) would make the project usable
+  for other councils or households that want the reminder.
+- **Scraper resilience + health check API** — add a `GET /api/health` endpoint
+  that reports scraper health: last successful scrape timestamp, row count
+  returned, and whether it fell below a minimum threshold. A canary assertion
+  (e.g. assert ≥ 4 collection rows returned) would catch council site redesigns
+  before the error LED fires. Health endpoint can also be used for external
+  uptime monitoring.
+
+### Lower priority
+
+- **Async `POST /api/leds/test`** — currently blocks for ~3 s. Fire-and-forget
+  with a status poll endpoint would improve UI responsiveness, though it adds
+  coordination complexity.
+- **Pico Accordion for logs and config** — collapse the Logs and Config sections
+  into Pico CSS v2 `<details>`/Accordion components to reduce page length and
+  keep the status card prominent above the fold.
