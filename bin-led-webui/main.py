@@ -69,6 +69,16 @@ def _recalculate_days_until(date_str: str) -> int | None:
         return None
 
 
+def _hours_until(date_str: str) -> int | None:
+    """Parse a date string like 'Wed - 25 Mar 2026' and return whole hours from now to midnight of that date."""
+    try:
+        parsed = datetime.strptime(date_str, "%a - %d %b %Y")
+        delta = parsed - datetime.now()
+        return max(0, int(delta.total_seconds() // 3600))
+    except ValueError:
+        return None
+
+
 def _leds_active(collections: list) -> bool:
     """Derive whether LEDs should currently be active based on schedule logic.
 
@@ -165,6 +175,7 @@ def get_status():
                 "date": col["date"],
                 "bin_type": col["bin_type"],
                 "days_until": days,
+                "hours_until": _hours_until(col["date"]),
             }
             break
 

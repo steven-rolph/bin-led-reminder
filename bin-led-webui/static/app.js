@@ -72,9 +72,13 @@ function StatusCard({ status }) {
           <span class="bin-dot" style=${{ background: binColour(next_collection.bin_type) }}></span>
           Next: <strong>${next_collection.bin_type}</strong> — ${next_collection.date}
           <span class="days-badge">
-            ${next_collection.days_until === 0 ? 'Today' :
-              next_collection.days_until === 1 ? 'Tomorrow' :
-              `${next_collection.days_until} days`}
+            ${next_collection.days_until > 1
+              ? `${next_collection.days_until} days`
+              : next_collection.hours_until != null && next_collection.hours_until < 1
+              ? (next_collection.days_until === 0 ? 'Due now' : 'Tomorrow')
+              : next_collection.hours_until != null
+              ? `${next_collection.days_until === 1 ? 'Tomorrow' : 'Today'} (in ${next_collection.hours_until}h)`
+              : next_collection.days_until === 0 ? 'Today' : 'Tomorrow'}
           </span>
         </p>
       `}
