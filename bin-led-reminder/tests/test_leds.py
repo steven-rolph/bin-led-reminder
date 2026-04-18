@@ -125,8 +125,7 @@ def test_service_integration():
         # Test schedule detection
         schedule = service.detect_collection_schedule()
         if schedule:
-            print(f"   → Detected schedule: {schedule['collection_day']} collection")
-            print(f"   → Reminder day: {schedule['reminder_day']}")
+            print(f"   → Next collection: {schedule['collection_date'].strftime('%A %d %b %Y')}")
             print(f"   → Bins due: {schedule['bins_due']}")
             
             # Test what colors would show

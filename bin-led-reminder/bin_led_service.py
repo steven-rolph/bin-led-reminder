@@ -235,8 +235,8 @@ class BinLEDService:
 
     def detect_collection_schedule(self):
         """
-        Smart detection of collection day and reminder day
-        Returns dict with collection_day, bins_due, and collection_date
+        Detect the next collection date and which bins are due.
+        Returns dict with collection_date (datetime.date) and bins_due.
         """
         next_collection = self.get_next_collection()
         if not next_collection:
@@ -244,22 +244,7 @@ class BinLEDService:
 
         this_week = self.get_this_weeks_collections()
 
-        # Parse the actual day from the date string
-        date_str = next_collection['date']
-
-        # Detect collection day from date string
-        if "Sat" in date_str:
-            collection_day = "Saturday"
-        elif "Fri" in date_str:
-            collection_day = "Friday"
-        elif "Thu" in date_str:
-            collection_day = "Thursday"
-        elif "Wed" in date_str:
-            collection_day = "Wednesday"
-        else:
-            # Unknown or unsupported day (Sun/Mon/Tue) - don't show reminder
-            self.logger.warning(f"Unusual collection day detected: {date_str}")
-            return None
+        collection_date = datetime.fromisoformat(next_collection['date_parsed']).date()
 
         # Get bin types for this week (excluding Black Bag)
         bins_due = []
@@ -269,9 +254,8 @@ class BinLEDService:
                 bins_due.append(bin_type)
 
         return {
-            'collection_day': collection_day,
+            'collection_date': collection_date,
             'bins_due': list(dict.fromkeys(bins_due)),  # Deduplicate, preserving order
-            'collection_date': next_collection['date']
         }
 
     def set_error_state(self, error_type, error_message):
@@ -315,30 +299,12 @@ class BinLEDService:
             return
 
         now = datetime.now()
-        today = now.strftime('%A')
-        current_hour = now.hour
-        
-        # Determine if LEDs should be on
-        should_display = False
-        
-        if schedule['collection_day'] == 'Wednesday':
-            # Normal week: Tuesday all day + Wednesday until 01:00
-            if today == 'Tuesday':
-                should_display = True
-            elif today == 'Wednesday' and current_hour < 1:
-                should_display = True
-        elif schedule['collection_day'] == 'Thursday':
-            # Holiday week: Wednesday all day + Thursday until 01:00
-            if today == 'Wednesday':
-                should_display = True
-            elif today == 'Thursday' and current_hour < 1:
-                should_display = True
-        elif schedule['collection_day'] == 'Friday':
-            # Holiday week: Thursday all day + Friday until 01:00
-            if today == 'Thursday':
-                should_display = True
-            elif today == 'Friday' and current_hour < 1:
-                should_display = True
+
+        # Reminder window: midnight the day before collection → 01:00 on collection day
+        collection_dt = datetime.combine(schedule['collection_date'], datetime.min.time())
+        reminder_start = collection_dt - timedelta(days=1)
+        reminder_end = collection_dt + timedelta(hours=1)
+        should_display = reminder_start <= now < reminder_end
         
         if should_display:
             bins_due = schedule['bins_due']
