@@ -191,7 +191,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash, ledBrightness 
         </div>
         <select
           value=${selectedColour}
-          style=${{ margin: 0, width: 'auto' }}
+          style=${{ margin: 0, width: 'auto', fontSize: '0.8rem', padding: '0.25rem 0.6rem' }}
           disabled=${busy !== null || serviceRunning !== false}
           onChange=${e => setSelectedColour(e.target.value)}
         >
