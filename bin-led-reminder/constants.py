@@ -11,6 +11,8 @@ COLOUR_PURPLE = (128,   0, 128)
 COLOUR_PINK   = (255,  20, 147)
 COLOUR_CYAN   = (  0, 255, 255)
 COLOUR_YELLOW = (255, 255,   0)
+COLOUR_GRAY   = (128, 128, 128)
+COLOUR_BLACK  = ( 30,  30,  30)  # true (0,0,0) is indistinguishable from LEDs off
 
 # ── Error / system state ───────────────────────────────────────────────────────
 COLOUR_ERROR  = COLOUR_RED   # red LEDs = error state
