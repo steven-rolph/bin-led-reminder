@@ -16,6 +16,8 @@ export const COLOUR_PURPLE = '#800080';
 export const COLOUR_PINK   = '#ff1493';
 export const COLOUR_CYAN   = '#00ffff';
 export const COLOUR_YELLOW = '#ffff00';
+export const COLOUR_GRAY   = '#808080';
+export const COLOUR_BLACK  = '#1e1e1e';  // true black is indistinguishable from LEDs off
 
 // ─── LED visualiser ────────────────────────────────────────────────────────────
 export const COLOUR_LED_OFF    = '#374151';  // dark square when LEDs are off
@@ -55,6 +57,8 @@ export const TEST_COLOUR_HEX = {
   pink:   COLOUR_PINK,
   cyan:   COLOUR_CYAN,
   yellow: COLOUR_YELLOW,
+  gray:   COLOUR_GRAY,
+  black:  COLOUR_BLACK,
 };
 
 // ─── Apply as CSS custom properties ────────────────────────────────────────────

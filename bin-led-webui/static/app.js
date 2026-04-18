@@ -119,7 +119,7 @@ function UpcomingCollections({ schedule }) {
   `;
 }
 
-function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
+function ServiceControls({ onAction, serviceRunning, onTestFlash, ledBrightness }) {
   const [busy, setBusy] = useState(null);
   const [message, setMessage] = useState(null);
   const [selectedColour, setSelectedColour] = useState(Object.keys(TEST_COLOUR_HEX)[0]);
@@ -185,6 +185,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
             <div key=${i} class="led-mini" style=${{
               backgroundColor: TEST_COLOUR_HEX[selectedColour],
               boxShadow: `0 0 6px 2px ${TEST_COLOUR_HEX[selectedColour]}`,
+              opacity: ledBrightness,
             }}></div>
           `)}
         </div>
@@ -200,7 +201,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
         </select>
         <button
           class="outline btn-sm"
-          style=${{ borderColor: TEST_COLOUR_HEX[selectedColour], color: TEST_COLOUR_HEX[selectedColour], margin: 0 }}
+          style=${{ margin: 0 }}
           aria-busy=${busy === `test-${selectedColour}`}
           disabled=${busy !== null || serviceRunning !== false}
           onClick=${() => handleTestFlash(selectedColour)}
@@ -436,6 +437,7 @@ function App() {
         onAction=${fetchStatus}
         serviceRunning=${status?.led_service_running}
         onTestFlash=${handleTestFlash}
+        ledBrightness=${config?.led_brightness ?? 0.1}
       />
       <${ConfigPanel}
         ledColour=${ledColour}
