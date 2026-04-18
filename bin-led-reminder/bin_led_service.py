@@ -190,7 +190,10 @@ class BinLEDService:
         if not data:
             return True
 
-        last_updated = datetime.fromisoformat(data['metadata']['last_updated'])
+        try:
+            last_updated = datetime.fromisoformat(data['metadata']['last_updated'])
+        except ValueError:
+            return True
         weeks_since_update = (datetime.now() - last_updated).days / 7
 
         return weeks_since_update >= self.config['update_interval_weeks']
@@ -204,7 +207,10 @@ class BinLEDService:
         today = datetime.now().date()
 
         for collection in data['collections']:
-            collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            try:
+                collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            except ValueError:
+                continue
             if collection_date >= today:
                 return collection
 
@@ -221,7 +227,10 @@ class BinLEDService:
         # Find the next collection date
         next_date = None
         for collection in data['collections']:
-            collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            try:
+                collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            except ValueError:
+                continue
             if collection_date >= today:
                 next_date = collection_date
                 break
@@ -230,10 +239,14 @@ class BinLEDService:
             return []
 
         # Return all collections on that exact date
-        return [
-            c for c in data['collections']
-            if datetime.fromisoformat(c['date_parsed']).date() == next_date
-        ]
+        result = []
+        for c in data['collections']:
+            try:
+                if datetime.fromisoformat(c['date_parsed']).date() == next_date:
+                    result.append(c)
+            except ValueError:
+                continue
+        return result
 
     def detect_collection_schedule(self):
         """
