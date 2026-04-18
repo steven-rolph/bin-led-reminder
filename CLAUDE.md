@@ -119,10 +119,9 @@ itself requires `./manage.sh webui {start|stop|restart}` directly on the device.
 Black Bag collections are intentionally ignored — they happen every week and
 don't need a reminder. See `recycling_schedule.json` for bin type strings.
 
-**Reminder window:** (collection_day − 1) at 00:00 → collection_day at 01:00.
-Normal week: Tuesday 00:00 → Wednesday 01:00.
-Bank holiday week (council shifts by one day): Wednesday 00:00 → Thursday 01:00.
-The service detects the shift automatically from the scraped date.
+**Reminder window:** (collection_date − 1 day) at 00:00 → collection_date at 01:00.
+Derived directly from `date_parsed` in the schedule JSON — no hardcoded day names.
+Works automatically for any collection day regardless of bank holiday shifts.
 
 When both a Blue Bin and a Green/Brown Bin fall on the same week, `bins_due[0]`
 determines the LED colour (Blue takes priority as it appears first in the
@@ -243,11 +242,6 @@ is slow and can OOM on the Pi Zero 2.
 
 ## Known issues / tech debt
 
-- 🔴 **`test_leds.py:129` references non-existent `reminder_day` key** — the
-  test does `schedule['reminder_day']` but `detect_collection_schedule()` never
-  included that key (it was only in the stale docstring). The integration test
-  crashes with `KeyError` whenever a schedule is found. Fix: remove the
-  `reminder_day` line from the test output block.
 - 🟡 **`fromisoformat()` calls without error handling** — `should_update_data`
   (line ~191), `get_next_collection` (line ~205), and `get_this_weeks_collections`
   (line ~222) all call `datetime.fromisoformat()` on `date_parsed` values from

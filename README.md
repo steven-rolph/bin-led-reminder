@@ -62,9 +62,9 @@ Black Bag collections happen every week and are intentionally ignored — the
 reminder is only for the bins that alternate.
 
 The reminder window is: **the day before collection at 00:00 → collection day at
-01:00**.  For bank holiday weeks the council shifts collection by one day
-(Wednesday → Thursday), which the service detects automatically from the scraped
-schedule.
+01:00**. The window is derived directly from the scraped collection date, so bank
+holiday shifts (Thursday, Friday, or any other day) are handled automatically
+with no hardcoded day names.
 
 ---
 
