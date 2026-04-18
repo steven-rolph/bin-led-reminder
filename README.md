@@ -61,9 +61,10 @@ bin-led-reminder/          ← repo root
 Black Bag collections happen every week and are intentionally ignored — the
 reminder is only for the bins that alternate.
 
-The reminder window is: **the day before collection at 00:00 → collection day at
-01:00**. The window is derived directly from the scraped collection date, so bank
-holiday shifts (Thursday, Friday, or any other day) are handled automatically
+The reminder window is configurable (`reminder_start_hours_before` /
+`reminder_end_hours_after`). At the defaults it runs from **the day before
+collection at 00:00 → collection day at 01:00**. The window is derived directly
+from the scraped collection date, so bank holiday shifts are handled automatically
 with no hardcoded day names.
 
 ---
@@ -152,10 +153,12 @@ Copy `config.example.json` to `config.json` and set your values.
 | `check_interval_hours` | `1` | How often the service checks whether to update LEDs |
 | `led_brightness` | `0.1` | Blinkt! brightness, 0.0–1.0 (0.1 is plenty indoors) |
 | `log_level` | `"INFO"` | Python logging level |
+| `reminder_start_hours_before` | `24` | Hours before midnight of collection day that LEDs turn on |
+| `reminder_end_hours_after` | `1` | Hours after midnight of collection day that LEDs turn off |
 
-`led_brightness`, `check_interval_hours`, `update_interval_weeks`, and
-`log_level` can be updated live via the web UI without editing the file
-directly. A service restart is required for the new values to take effect.
+All keys except `uprn` and `base_url` can be edited via the web UI. Config
+fields are disabled while the LED service is running — stop it first, make
+changes, then restart.
 
 ---
 

@@ -119,8 +119,9 @@ itself requires `./manage.sh webui {start|stop|restart}` directly on the device.
 Black Bag collections are intentionally ignored — they happen every week and
 don't need a reminder. See `recycling_schedule.json` for bin type strings.
 
-**Reminder window:** (collection_date − 1 day) at 00:00 → collection_date at 01:00.
-Derived directly from `date_parsed` in the schedule JSON — no hardcoded day names.
+**Reminder window:** configurable via `reminder_start_hours_before` (default 24) and
+`reminder_end_hours_after` (default 1). At defaults: (collection_date − 24 h) at 00:00 →
+collection_date at 01:00. Derived directly from `date_parsed` — no hardcoded day names.
 Works automatically for any collection day regardless of bank holiday shifts.
 
 When both a Blue Bin and a Green/Brown Bin fall on the same week, `bins_due[0]`
@@ -140,7 +141,7 @@ instability.
 | `GET` | `/api/status` | LED service state, error state, next collection, LEDs active |
 | `GET` | `/api/schedule` | Upcoming collections (past entries filtered out, `days_until` recalculated at request time) |
 | `GET` | `/api/config` | Editable config fields (`uprn` and `base_url` are read-only and omitted from `PATCH`) |
-| `PATCH` | `/api/config` | Update: `led_brightness`, `check_interval_hours`, `update_interval_weeks`, `log_level` |
+| `PATCH` | `/api/config` | Update: `led_brightness`, `check_interval_hours`, `update_interval_weeks`, `log_level`, `reminder_start_hours_before`, `reminder_end_hours_after` |
 | `GET` | `/api/logs?lines=50` | Last N lines of LED service log (max 200) |
 | `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` |
 | `POST` | `/api/leds/test` | Flash LEDs a given colour; 409 if LED service is running, 503 in dev mode |
