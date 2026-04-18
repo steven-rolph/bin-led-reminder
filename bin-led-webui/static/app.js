@@ -270,42 +270,46 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
             onInput=${e => setForm({ ...form, led_brightness: e.target.value })}
           />
         </label>
-        <label>
-          Check Interval (hours)
-          <input
-            type="number" min="1" max="24"
-            value=${form.check_interval_hours}
-            disabled=${fieldsDisabled}
-            onInput=${e => setForm({ ...form, check_interval_hours: e.target.value })}
-          />
-        </label>
-        <label>
-          Schedule Update Interval (weeks)
-          <input
-            type="number" min="1" max="8"
-            value=${form.update_interval_weeks}
-            disabled=${fieldsDisabled}
-            onInput=${e => setForm({ ...form, update_interval_weeks: e.target.value })}
-          />
-        </label>
-        <label>
-          Reminder Start (hours before midnight of collection day)
-          <input
-            type="number" min="1" max="48"
-            value=${form.reminder_start_hours_before}
-            disabled=${fieldsDisabled}
-            onInput=${e => setForm({ ...form, reminder_start_hours_before: e.target.value })}
-          />
-        </label>
-        <label>
-          Reminder End (hours after midnight of collection day)
-          <input
-            type="number" min="0" max="12"
-            value=${form.reminder_end_hours_after}
-            disabled=${fieldsDisabled}
-            onInput=${e => setForm({ ...form, reminder_end_hours_after: e.target.value })}
-          />
-        </label>
+        <div class="grid">
+          <label>
+            Check Interval (hours)
+            <input
+              type="number" min="1" max="24"
+              value=${form.check_interval_hours}
+              disabled=${fieldsDisabled}
+              onInput=${e => setForm({ ...form, check_interval_hours: e.target.value })}
+            />
+          </label>
+          <label>
+            Schedule Update (weeks)
+            <input
+              type="number" min="1" max="8"
+              value=${form.update_interval_weeks}
+              disabled=${fieldsDisabled}
+              onInput=${e => setForm({ ...form, update_interval_weeks: e.target.value })}
+            />
+          </label>
+        </div>
+        <div class="grid">
+          <label>
+            Reminder Start (hours before)
+            <input
+              type="number" min="1" max="48"
+              value=${form.reminder_start_hours_before}
+              disabled=${fieldsDisabled}
+              onInput=${e => setForm({ ...form, reminder_start_hours_before: e.target.value })}
+            />
+          </label>
+          <label>
+            Reminder End (hours after)
+            <input
+              type="number" min="0" max="12"
+              value=${form.reminder_end_hours_after}
+              disabled=${fieldsDisabled}
+              onInput=${e => setForm({ ...form, reminder_end_hours_after: e.target.value })}
+            />
+          </label>
+        </div>
         ${fieldsDisabled && html`
           <small style=${{ color: COLOUR_MUTED }}>Stop the LED service to edit settings.</small>
         `}
