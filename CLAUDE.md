@@ -143,7 +143,7 @@ instability.
 | `GET` | `/api/config` | Editable config fields (`uprn` and `base_url` are read-only and omitted from `PATCH`) |
 | `PATCH` | `/api/config` | Update: `led_brightness`, `check_interval_hours`, `update_interval_weeks`, `log_level`, `reminder_start_hours_before`, `reminder_end_hours_after` |
 | `GET` | `/api/logs?lines=50` | Last N lines of LED service log (max 200) |
-| `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` |
+| `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` / `force-update` |
 | `POST` | `/api/leds/test` | Flash LEDs a given colour; 409 if LED service is running, 503 in dev mode |
 
 The `POST /api/leds/test` endpoint blocks for ~3 s. Test flash buttons in the

@@ -229,7 +229,7 @@ def get_logs(lines: int = 50):
 
 @app.post("/api/service/{action}")
 def service_action(action: str):
-    valid_actions = {"start", "stop", "restart", "clear-errors"}
+    valid_actions = {"start", "stop", "restart", "clear-errors", "force-update"}
     if action not in valid_actions:
         raise HTTPException(status_code=400, detail=f"Unknown action: {action}. Valid: {valid_actions}")
 
@@ -242,6 +242,17 @@ def service_action(action: str):
         else:
             logger.error("Web UI: clear-errors failed — %s", msg)
         return {"success": success, "action": action, "message": msg or "Error state cleared and service restarted"}
+
+    if action == "force-update":
+        if SCHEDULE_FILE.exists():
+            SCHEDULE_FILE.unlink()
+        logger.info("Web UI: LED service force-update requested")
+        success, msg = _run_systemctl("restart", "bin-led-reminder")
+        if success:
+            logger.info("Web UI: LED service force-update succeeded")
+        else:
+            logger.error("Web UI: LED service force-update failed — %s", msg)
+        return {"success": success, "action": action, "message": msg or "Schedule cleared and service restarted"}
 
     logger.info("Web UI: service %s requested", action)
     success, msg = _run_systemctl(action, "bin-led-reminder")
