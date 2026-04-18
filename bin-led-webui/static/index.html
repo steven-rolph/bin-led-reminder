@@ -73,13 +73,20 @@
       margin: 0.75rem 0 0.25rem;
     }
     button.outline { margin-right: 0.5rem; }
+    button.tooltip-help {
+      display: inline;
+      padding: 0;
+      margin: 0 0 0 2px;
+      border: none;
+      background: none;
+      font-size: 0.75rem;
+      color: var(--pico-muted-color);
+      cursor: help;
+      vertical-align: super;
+    }
     main > article {
       margin-bottom: 2rem;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-      overflow: visible;
-    }
-    [data-tooltip]::before {
-      width: max-content;
     }
   </style>
 </head>
