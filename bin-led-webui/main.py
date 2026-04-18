@@ -200,6 +200,11 @@ def patch_config(updates: dict):
     if disallowed:
         raise HTTPException(status_code=400, detail=f"Keys not editable: {disallowed}")
 
+    if "led_brightness" in updates:
+        v = updates["led_brightness"]
+        if not isinstance(v, (int, float)) or not (0.0 <= v <= 1.0):
+            raise HTTPException(status_code=400, detail="led_brightness must be between 0.0 and 1.0")
+
     data = _read_json(CONFIG_FILE)
     if data is None:
         raise HTTPException(status_code=404, detail="Config file not found")
