@@ -262,7 +262,7 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
       </div>
       <form onSubmit=${handleSave}>
         <label>
-          LED Brightness (0.0–1.0)
+          LED Brightness (0.0–1.0) <sup data-tooltip="Keep low; 0.05–0.15 is typical indoors">?</sup>
           <input
             type="number" min="0" max="1" step="0.01"
             value=${form.led_brightness}
@@ -272,7 +272,7 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
         </label>
         <div class="grid">
           <label>
-            Check Interval (hours)
+            Check Interval (hours) <sup data-tooltip="How often the service wakes to decide whether LEDs should be on or off">?</sup>
             <input
               type="number" min="1" max="24"
               value=${form.check_interval_hours}
@@ -281,7 +281,7 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
             />
           </label>
           <label>
-            Schedule Update (weeks)
+            Schedule Update (weeks) <sup data-tooltip="How often the council website is re-scraped for new collection dates">?</sup>
             <input
               type="number" min="1" max="8"
               value=${form.update_interval_weeks}
@@ -292,7 +292,7 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
         </div>
         <div class="grid">
           <label>
-            Reminder Start (hours before)
+            Reminder Start (hours before) <sup data-tooltip="Hours before midnight of collection day the LEDs turn on (24 = previous evening)">?</sup>
             <input
               type="number" min="1" max="48"
               value=${form.reminder_start_hours_before}
@@ -301,7 +301,7 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
             />
           </label>
           <label>
-            Reminder End (hours after)
+            Reminder End (hours after) <sup data-tooltip="Hours after midnight of collection day the LEDs turn off (1 = 1am on collection morning)">?</sup>
             <input
               type="number" min="0" max="12"
               value=${form.reminder_end_hours_after}
