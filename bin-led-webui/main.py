@@ -43,7 +43,7 @@ except OSError:
     pass  # Log directory not present; console only until LED service creates it
 
 # Keys that can be updated via PATCH /api/config
-EDITABLE_CONFIG_KEYS = {"led_brightness", "check_interval_hours", "update_interval_weeks", "log_level"}
+EDITABLE_CONFIG_KEYS = {"led_brightness", "check_interval_hours", "update_interval_weeks", "log_level", "reminder_start_hours_before", "reminder_end_hours_after"}
 
 TEST_COLOURS = {
     "blue":  (0, 0, 255),
@@ -72,9 +72,13 @@ def _recalculate_days_until(date_str: str) -> int:
 def _leds_active(collections: list) -> bool:
     """Derive whether LEDs should currently be active based on schedule logic.
 
-    For both normal (Wednesday) and bank holiday (Thursday) collection weeks the
-    window is: (collection_day - 1) at 00:00 → collection_day at 01:00.
+    The reminder window is read from config (reminder_start_hours_before /
+    reminder_end_hours_after) with the same defaults as the LED service.
     """
+    cfg = _read_json(CONFIG_FILE) or {}
+    start_h = cfg.get("reminder_start_hours_before", 24)
+    end_h = cfg.get("reminder_end_hours_after", 1)
+
     now = datetime.now()
     for col in collections:
         if col.get("bin_type") == "Black Bag":
@@ -83,8 +87,9 @@ def _leds_active(collections: list) -> bool:
             col_date = datetime.strptime(col["date"], "%a - %d %b %Y").date()
         except (ValueError, KeyError):
             continue
-        window_start = datetime(col_date.year, col_date.month, col_date.day) - timedelta(days=1)
-        window_end = datetime(col_date.year, col_date.month, col_date.day, 1, 0, 0)
+        col_dt = datetime(col_date.year, col_date.month, col_date.day)
+        window_start = col_dt - timedelta(hours=start_h)
+        window_end = col_dt + timedelta(hours=end_h)
         if window_start <= now <= window_end:
             return True
     return False
@@ -184,6 +189,8 @@ def get_config():
         "check_interval_hours": data.get("check_interval_hours"),
         "led_brightness": data.get("led_brightness"),
         "log_level": data.get("log_level"),
+        "reminder_start_hours_before": data.get("reminder_start_hours_before", 24),
+        "reminder_end_hours_after": data.get("reminder_end_hours_after", 1),
     }
 
 

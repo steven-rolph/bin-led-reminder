@@ -200,7 +200,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
   `;
 }
 
-function ConfigPanel({ ledColour, ledBrightness }) {
+function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -213,6 +213,8 @@ function ConfigPanel({ ledColour, ledBrightness }) {
         led_brightness: c.led_brightness,
         check_interval_hours: c.check_interval_hours,
         update_interval_weeks: c.update_interval_weeks,
+        reminder_start_hours_before: c.reminder_start_hours_before,
+        reminder_end_hours_after: c.reminder_end_hours_after,
       });
     });
   }, []);
@@ -226,6 +228,8 @@ function ConfigPanel({ ledColour, ledBrightness }) {
         led_brightness: parseFloat(form.led_brightness),
         check_interval_hours: parseInt(form.check_interval_hours),
         update_interval_weeks: parseInt(form.update_interval_weeks),
+        reminder_start_hours_before: parseInt(form.reminder_start_hours_before),
+        reminder_end_hours_after: parseInt(form.reminder_end_hours_after),
       });
       setMessage({ ok: true, text: 'Saved.' });
     } catch (err) {
@@ -236,6 +240,8 @@ function ConfigPanel({ ledColour, ledBrightness }) {
   }
 
   if (!config) return html`<article aria-busy="true">Loading config...</article>`;
+
+  const fieldsDisabled = serviceRunning !== false;
 
   return html`
     <article>
@@ -260,6 +266,7 @@ function ConfigPanel({ ledColour, ledBrightness }) {
           <input
             type="number" min="0" max="1" step="0.01"
             value=${form.led_brightness}
+            disabled=${fieldsDisabled}
             onInput=${e => setForm({ ...form, led_brightness: e.target.value })}
           />
         </label>
@@ -268,6 +275,7 @@ function ConfigPanel({ ledColour, ledBrightness }) {
           <input
             type="number" min="1" max="24"
             value=${form.check_interval_hours}
+            disabled=${fieldsDisabled}
             onInput=${e => setForm({ ...form, check_interval_hours: e.target.value })}
           />
         </label>
@@ -276,10 +284,32 @@ function ConfigPanel({ ledColour, ledBrightness }) {
           <input
             type="number" min="1" max="8"
             value=${form.update_interval_weeks}
+            disabled=${fieldsDisabled}
             onInput=${e => setForm({ ...form, update_interval_weeks: e.target.value })}
           />
         </label>
-        <button type="submit" aria-busy=${saving}>Save</button>
+        <label>
+          Reminder Start (hours before midnight of collection day)
+          <input
+            type="number" min="1" max="48"
+            value=${form.reminder_start_hours_before}
+            disabled=${fieldsDisabled}
+            onInput=${e => setForm({ ...form, reminder_start_hours_before: e.target.value })}
+          />
+        </label>
+        <label>
+          Reminder End (hours after midnight of collection day)
+          <input
+            type="number" min="0" max="12"
+            value=${form.reminder_end_hours_after}
+            disabled=${fieldsDisabled}
+            onInput=${e => setForm({ ...form, reminder_end_hours_after: e.target.value })}
+          />
+        </label>
+        ${fieldsDisabled && html`
+          <small style=${{ color: COLOUR_MUTED }}>Stop the LED service to edit settings.</small>
+        `}
+        <button type="submit" disabled=${fieldsDisabled} aria-busy=${saving}>Save</button>
         ${message && html`
           <span style=${{ marginLeft: '1rem', color: message.ok ? COLOUR_SUCCESS : COLOUR_FAILURE }}>
             ${message.text}
@@ -393,6 +423,7 @@ function App() {
       <${ConfigPanel}
         ledColour=${ledColour}
         ledBrightness=${config?.led_brightness ?? 0.1}
+        serviceRunning=${status?.led_service_running}
       />
       <${LogViewer} />
     </main>
