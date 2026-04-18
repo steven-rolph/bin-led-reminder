@@ -256,5 +256,4 @@ is slow and can OOM on the Pi Zero 2.
 
 ## Known gaps / planned work
 
-- `POST /api/leds/test` actions are not yet written to the LED service log
-- Web UI action logging for test flash commands not yet implemented in `main.py`
+- No items currently tracked.
