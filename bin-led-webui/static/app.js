@@ -2,7 +2,7 @@ import { h, render } from 'https://esm.sh/preact@10';
 import { useState, useEffect, useCallback } from 'https://esm.sh/preact@10/hooks';
 import { html } from 'https://esm.sh/htm@3/preact';
 import {
-  COLOUR_BIN_BLUE, COLOUR_BIN_GREEN, COLOUR_BIN_BLACK_BAG,
+  COLOUR_BIN_GREEN, COLOUR_BIN_BLACK_BAG,
   COLOUR_ERROR, COLOUR_LEDS_ACTIVE, COLOUR_LED_OFF, COLOUR_FLASH_WHITE,
   COLOUR_SUCCESS, COLOUR_FAILURE, COLOUR_MUTED,
   BIN_COLOURS, TEST_COLOUR_HEX,
@@ -19,9 +19,7 @@ function ledVisualiserColour(status, testColour) {
   if (status.has_error) return COLOUR_ERROR;
   if (status.leds_active) {
     const bt = status.next_collection?.bin_type;
-    if (bt === 'Blue Bin') return COLOUR_BIN_BLUE;
-    if (bt === 'Green or Brown Bin') return COLOUR_BIN_GREEN;
-    return COLOUR_FLASH_WHITE;
+    return BIN_COLOURS[bt] || COLOUR_FLASH_WHITE;
   }
   return null;
 }
@@ -181,12 +179,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
       `}
       <p class="test-led-label">Test LEDs</p>
       <div>
-        ${[
-          { colour: 'blue',  label: 'Flash Blue',  hex: COLOUR_BIN_BLUE },
-          { colour: 'green', label: 'Flash Green', hex: COLOUR_BIN_GREEN },
-          { colour: 'red',   label: 'Flash Red',   hex: COLOUR_ERROR },
-          { colour: 'white', label: 'Flash White', hex: COLOUR_FLASH_WHITE },
-        ].map(({ colour, label, hex }) => html`
+        ${Object.entries(TEST_COLOUR_HEX).map(([colour, hex]) => html`
           <button
             key=${colour}
             class="outline btn-sm"
@@ -194,7 +187,7 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash }) {
             aria-busy=${busy === `test-${colour}`}
             disabled=${busy !== null || serviceRunning !== false}
             onClick=${() => handleTestFlash(colour)}
-          >${label}</button>
+          >Flash ${colour.charAt(0).toUpperCase() + colour.slice(1)}</button>
         `)}
       </div>
       ${serviceRunning !== false && html`

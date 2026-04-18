@@ -134,6 +134,23 @@ instability.
 
 ---
 
+## Colour constants
+
+Colour definitions live in two parallel files — one per language layer:
+
+- `bin-led-reminder/constants.py` — RGB tuples `(R, G, B)` for the LED service
+- `bin-led-webui/static/consts.js` — hex strings for the web UI
+
+When adding a new colour or bin type mapping, update **all three** of:
+
+1. `bin-led-reminder/constants.py` — add RGB tuple to palette; add to `BIN_COLOURS` if a bin type
+2. `bin-led-webui/static/consts.js` — add hex value to palette; add to `TEST_COLOUR_HEX`
+3. `bin-led-webui/main.py` — add RGB tuple to `TEST_COLOURS`
+
+There is no code generation or shared source — these must be kept in sync manually.
+
+---
+
 ## Web UI API
 
 | Method | Path | Description |

@@ -45,11 +45,18 @@ except OSError:
 # Keys that can be updated via PATCH /api/config
 EDITABLE_CONFIG_KEYS = {"led_brightness", "check_interval_hours", "update_interval_weeks", "log_level", "reminder_start_hours_before", "reminder_end_hours_after"}
 
+# Keep in sync with TEST_COLOUR_HEX in bin-led-webui/static/consts.js
+# and the general palette in bin-led-reminder/constants.py.
 TEST_COLOURS = {
-    "blue":  (0, 0, 255),
-    "green": (0, 255, 0),
-    "red":   (255, 0, 0),
-    "white": (255, 255, 255),
+    "blue":   (  0,   0, 255),
+    "green":  (  0, 255,   0),
+    "red":    (255,   0,   0),
+    "white":  (255, 255, 255),
+    "orange": (255, 165,   0),
+    "purple": (128,   0, 128),
+    "pink":   (255,  20, 147),
+    "cyan":   (  0, 255, 255),
+    "yellow": (255, 255,   0),
 }
 
 
@@ -289,7 +296,7 @@ def test_leds(body: dict):
         raise HTTPException(status_code=409, detail="LED service is running. Stop it before using test controls.")
     colour = body.get("colour", "")
     if colour not in TEST_COLOURS:
-        raise HTTPException(status_code=400, detail="Unknown colour. Valid: blue, green, red, white")
+        raise HTTPException(status_code=400, detail=f"Unknown colour. Valid: {', '.join(TEST_COLOURS)}")
     config = _read_json(CONFIG_FILE) or {}
     brightness = config.get("led_brightness", 0.1)
     r, g, b = TEST_COLOURS[colour]
