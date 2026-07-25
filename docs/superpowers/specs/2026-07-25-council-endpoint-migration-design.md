@@ -194,9 +194,11 @@ brightness/current scenario already flagged as a stability risk.
   new bin-type strings; `COLOUR_BIN_BLACK_BAG` (dual-purpose: ignored-bin
   colour + muted UI text) keeps its muted-grey value but its bin-type key
   changes from `'Black Bag'` to `'OUTDOOR FOOD CADDY'`.
-- `bin-led-webui/main.py`: `TEST_COLOURS` keys updated to match; the two
-  `if col.get("bin_type") == "Black Bag"` filters (`_leds_active`,
-  next-collection lookup) become `"OUTDOOR FOOD CADDY"`.
+- `bin-led-webui/main.py`: the two `if col.get("bin_type") == "Black Bag"`
+  filters (`_leds_active`, next-collection lookup) become
+  `"OUTDOOR FOOD CADDY"`. (`TEST_COLOURS` in this file is keyed by generic
+  colour names for the manual test-flash feature, not bin-type strings — it
+  is unrelated to the bin taxonomy and needs no change.)
 - `bin-led-webui/static/app.js`: the `UpcomingCollections` filter
   (`c.bin_type !== 'Black Bag'`) becomes `'OUTDOOR FOOD CADDY'`.
 - `GET /api/status` gains `last_scraped` (straight passthrough of
