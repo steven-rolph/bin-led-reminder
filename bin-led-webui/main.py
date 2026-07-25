@@ -100,7 +100,7 @@ def _leds_active(collections: list) -> bool:
 
     now = datetime.now()
     for col in collections:
-        if col.get("bin_type") == "Black Bag":
+        if col.get("bin_type") == "OUTDOOR FOOD CADDY":
             continue
         try:
             col_date = datetime.strptime(col["date"], "%a - %d %b %Y").date()
@@ -174,26 +174,37 @@ def get_status():
     if has_error:
         error_details = _read_json(ERROR_FILE)
 
-    next_collection = None
+    # Collect every non-ignored collection sharing the earliest upcoming
+    # date (collections is sorted by date, so matches are contiguous) —
+    # keeps this in sync with what the split-LED display on the Pi shows.
+    next_collections = []
+    next_date = None
     for col in collections:
-        if col.get("bin_type") == "Black Bag":
+        if col.get("bin_type") == "OUTDOOR FOOD CADDY":
             continue
         days = _recalculate_days_until(col["date"])
-        if days is not None and days >= 0:
-            next_collection = {
-                "date": col["date"],
-                "bin_type": col["bin_type"],
-                "days_until": days,
-                "hours_until": _hours_until(col["date"]),
-            }
+        if days is None or days < 0:
+            continue
+        if next_date is None:
+            next_date = col["date"]
+        elif col["date"] != next_date:
             break
+        next_collections.append({
+            "date": col["date"],
+            "bin_type": col["bin_type"],
+            "days_until": days,
+            "hours_until": _hours_until(col["date"]),
+        })
+
+    last_scraped = (schedule_data or {}).get("metadata", {}).get("last_updated")
 
     return {
         "led_service_running": _service_is_active(),
         "has_error": has_error,
         "error_details": error_details,
-        "next_collection": next_collection,
+        "next_collections": next_collections,
         "leds_active": _leds_active(collections),
+        "last_scraped": last_scraped,
     }
 
 
@@ -202,9 +213,8 @@ def get_config():
     data = _read_json(CONFIG_FILE)
     if data is None:
         raise HTTPException(status_code=404, detail="Config file not found")
-    # Return only the fields the UI cares about (omit base_url, uprn)
+    # Return only the fields the UI cares about (omit base_url)
     return {
-        "uprn": data.get("uprn"),
         "update_interval_weeks": data.get("update_interval_weeks"),
         "check_interval_hours": data.get("check_interval_hours"),
         "led_brightness": data.get("led_brightness"),
