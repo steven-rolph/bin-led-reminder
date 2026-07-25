@@ -1,14 +1,15 @@
 // ─── Bin type colours ─────────────────────────────────────────────────────────
-export const COLOUR_BIN_BLUE      = '#3b82f6';  // Blue Bin
-export const COLOUR_BIN_GREEN     = '#22c55e';  // Green or Brown Bin
-export const COLOUR_BIN_BLACK_BAG = '#6b7280';  // Black Bag (also used for muted UI text)
+export const COLOUR_BIN_BLUE   = '#3b82f6';  // Recycling Bin - 240L
+export const COLOUR_BIN_GREEN  = '#22c55e';  // Garden Waste Bin
+export const COLOUR_BIN_ORANGE = '#ffa500';  // Rubbish Bin - 180L
+export const COLOUR_MUTED_DOT  = '#6b7280';  // Ignored bin type (Outdoor Food Caddy); also used for muted UI dots/text
 
 // ─── Service & LED state indicators ───────────────────────────────────────────
 // Running dot → COLOUR_BIN_GREEN
 // Stopped / error dot → COLOUR_ERROR
 export const COLOUR_ERROR      = '#ef4444';  // error state, service stopped, flash red, log errors
 export const COLOUR_LEDS_ACTIVE = '#facc15';  // yellow dot when LEDs are on
-// LEDs-off dot → COLOUR_BIN_BLACK_BAG
+// LEDs-off dot → COLOUR_MUTED_DOT
 
 // ─── General palette ──────────────────────────────────────────────────────────
 export const COLOUR_ORANGE = '#ffa500';
@@ -40,10 +41,11 @@ export const COLOUR_LOG_BG              = '#1a1a2e';  // log container backgroun
 // ─── Lookup maps ───────────────────────────────────────────────────────────────
 // Keys must match bin_type strings in recycling_schedule.json exactly.
 // Keep in sync with BIN_COLOURS in bin-led-reminder/constants.py.
+// Outdoor Food Caddy is deliberately absent — it never drives the LEDs.
 export const BIN_COLOURS = {
-  'Blue Bin':           COLOUR_BIN_BLUE,
-  'Green or Brown Bin': COLOUR_BIN_GREEN,
-  'Black Bag':          COLOUR_BIN_BLACK_BAG,
+  'RECYCLING BIN - 240L': COLOUR_BIN_BLUE,
+  'GARDEN WASTE BIN':     COLOUR_BIN_GREEN,
+  'RUBBISH BIN - 180L':   COLOUR_BIN_ORANGE,
 };
 
 // Keep in sync with TEST_COLOURS in bin-led-webui/main.py.
@@ -65,7 +67,7 @@ export const TEST_COLOUR_HEX = {
 // Allows index.html CSS to use var(--colour-*) with these as the source of truth.
 const _root = document.documentElement;
 _root.style.setProperty('--colour-error',                COLOUR_ERROR);
-_root.style.setProperty('--colour-bin-black-bag',        COLOUR_BIN_BLACK_BAG);
+_root.style.setProperty('--colour-bin-black-bag',        COLOUR_MUTED_DOT);
 _root.style.setProperty('--colour-led-off',              COLOUR_LED_OFF);
 _root.style.setProperty('--colour-error-banner-bg',      COLOUR_ERROR_BANNER_BG);
 _root.style.setProperty('--colour-error-banner-fg',      COLOUR_ERROR_BANNER_FG);
