@@ -61,17 +61,21 @@ def test_colour_error_is_red():
 
 # ── BIN_COLOURS mapping ────────────────────────────────────────────────────────
 
-def test_bin_colours_blue_bin_maps_to_blue():
-    assert BIN_COLOURS['Blue Bin'] == COLOUR_BLUE
+def test_bin_colours_recycling_maps_to_blue():
+    assert BIN_COLOURS['RECYCLING BIN - 240L'] == COLOUR_BLUE
 
 
-def test_bin_colours_green_bin_maps_to_green():
-    assert BIN_COLOURS['Green or Brown Bin'] == COLOUR_GREEN
+def test_bin_colours_garden_waste_maps_to_green():
+    assert BIN_COLOURS['GARDEN WASTE BIN'] == COLOUR_GREEN
 
 
-def test_black_bag_absent_from_bin_colours():
-    # Black Bag is filtered before lookup and must never drive the LEDs
-    assert 'Black Bag' not in BIN_COLOURS
+def test_bin_colours_rubbish_maps_to_orange():
+    assert BIN_COLOURS['RUBBISH BIN - 180L'] == COLOUR_ORANGE
+
+
+def test_food_caddy_absent_from_bin_colours():
+    # Outdoor Food Caddy is filtered before lookup and must never drive the LEDs
+    assert 'OUTDOOR FOOD CADDY' not in BIN_COLOURS
 
 
 def test_unknown_bin_type_returns_none():
@@ -116,15 +120,21 @@ def _run_display(bin_type):
     return service
 
 
-def test_blue_bin_sets_blue_leds():
-    _run_display('Blue Bin')
+def test_recycling_bin_sets_blue_leds():
+    _run_display('RECYCLING BIN - 240L')
     _blinkt.set_all.assert_called_once_with(*COLOUR_BLUE, 0.1)
     _blinkt.show.assert_called()
 
 
-def test_green_or_brown_bin_sets_green_leds():
-    _run_display('Green or Brown Bin')
+def test_garden_waste_bin_sets_green_leds():
+    _run_display('GARDEN WASTE BIN')
     _blinkt.set_all.assert_called_once_with(*COLOUR_GREEN, 0.1)
+    _blinkt.show.assert_called()
+
+
+def test_rubbish_bin_sets_orange_leds():
+    _run_display('RUBBISH BIN - 180L')
+    _blinkt.set_all.assert_called_once_with(*COLOUR_ORANGE, 0.1)
     _blinkt.show.assert_called()
 
 
@@ -180,7 +190,7 @@ def test_leds_off_outside_reminder_window():
     service = _make_service()
     # Collection was two days ago — outside any window
     past_date = _FIXED_NOW.date() - timedelta(days=2)
-    schedule = {'collection_date': past_date, 'bins_due': ['Blue Bin']}
+    schedule = {'collection_date': past_date, 'bins_due': ['RECYCLING BIN - 240L']}
     with patch.object(service, 'detect_collection_schedule', return_value=schedule):
         with patch('bin_led_service.datetime') as mock_dt:
             mock_dt.now.return_value = _FIXED_NOW
