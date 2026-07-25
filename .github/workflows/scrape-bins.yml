@@ -1,0 +1,39 @@
+name: Scrape bin collection schedule
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # 06:00 UTC every Monday
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r bin-led-scraper/requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run scraper
+        env:
+          COUNCIL_POSTCODE: ${{ secrets.COUNCIL_POSTCODE }}
+          COUNCIL_UPRN: ${{ secrets.COUNCIL_UPRN }}
+        run: python bin-led-scraper/scrape_bins.py
+
+      - name: Commit updated schedule
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bin-led-scraper/data/recycling_schedule.json
+          git diff --staged --quiet || git commit -m "chore: update bin collection schedule"
+          git push
