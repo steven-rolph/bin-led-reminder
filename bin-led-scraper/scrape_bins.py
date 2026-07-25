@@ -14,10 +14,11 @@ The form itself is rendered inside an iframe (`<iframe class="achieveforms-ifram
 populated client-side after the outer page loads) rather than directly on the
 page — field lookups must be scoped to that frame, not the top-level page.
 
-NOTE: the postcode-search trigger (Enter key vs. auto-search-as-you-type)
-was inferred, not directly observed, during investigation. If this script
-starts failing at the "waiting for address options" step, that's the first
-thing to check with a real browser + DevTools open.
+NOTE: selecting an address does not itself trigger the schedule lookup — a
+"Find collection dates" button appears once an address is selected and must
+be clicked to fire the runLookup request. If this script starts timing out
+waiting for that response, check with a real browser + DevTools open whether
+the button's accessible name/role has changed.
 """
 import json
 import os
@@ -66,11 +67,15 @@ def scrape_once(postcode: str, uprn: str) -> list[dict]:
             arg=address_field.element_handle(),
             timeout=15000,
         )
+        address_field.select_option(value=uprn)
 
+        # Selecting the address does not itself trigger the schedule lookup —
+        # a "Find collection dates" button appears once an address is picked
+        # and must be clicked to fire the runLookup request.
         with page.expect_response(
             lambda r: "apibroker/runLookup" in r.url and "ScheduledStart" in r.text()
         ) as response_info:
-            address_field.select_option(value=uprn)
+            form.get_by_role("button", name="Find collection dates").click()
 
         payload = response_info.value.json()
         browser.close()
