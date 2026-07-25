@@ -339,8 +339,21 @@ def test_leds(body: dict):
     return {"success": True, "colour": colour}
 
 
+class RevalidateStaticFiles(StaticFiles):
+    """Serves static files but forces browsers to always revalidate (via
+    ETag/Last-Modified) rather than trusting a cached copy indefinitely.
+    Without this, a browser that cached consts.js/app.js before a deploy
+    keeps rendering the old bin colours/taxonomy after the deploy, even
+    across a normal reload — only a hard refresh or cache clear notices."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 # Serve frontend
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", RevalidateStaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def index():
