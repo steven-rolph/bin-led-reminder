@@ -157,79 +157,180 @@ git commit -m "feat: update bin colour mapping to new council taxonomy"
 
 ### Task 2: Filter Outdoor Food Caddy instead of Black Bag in schedule detection
 
+**Note:** an unrelated bug fix (`2ac163d feat: enhance collection schedule
+detection to skip Black Bag entries`, already merged into `main` from a
+prior session) rewrote `detect_collection_schedule()` since this plan's
+initial draft. It replaced the old `get_next_collection()` +
+`get_this_weeks_collections()`-based implementation with a single merged
+loop directly over `data['collections']`, and added two tests
+(`test_detect_schedule_skips_black_bag_when_finding_next_date`,
+`test_detect_schedule_black_bag_only_returns_none`) that already cover the
+exact scenario this task cares about. This task's steps below target the
+*current* implementation — rename/update those two existing tests rather
+than adding a new one. `get_next_collection()` and
+`get_this_weeks_collections()` (`bin_led_service.py:202-250`) are now dead
+code as a side effect of that fix; leave them as-is, removing them is out of
+scope for this migration.
+
 **Files:**
-- Modify: `bin-led-reminder/bin_led_service.py:265-273` (`detect_collection_schedule`)
+- Modify: `bin-led-reminder/bin_led_service.py:252-289` (`detect_collection_schedule`)
 - Modify: `bin-led-reminder/tests/test_colours.py`
 
 **Interfaces:**
-- Consumes: `BinLEDService.detect_collection_schedule()` (existing method, unchanged signature — returns `{'collection_date': date, 'bins_due': [str, ...]}`).
+- Consumes: `BinLEDService.detect_collection_schedule()` (existing method, unchanged signature — returns `{'collection_date': date, 'bins_due': [str, ...]}` or `None`).
 - Produces: `detect_collection_schedule()` now excludes `'OUTDOOR FOOD CADDY'` instead of `'Black Bag'`. Task 3 builds on this.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Update the two existing tests to the new taxonomy and rename them**
 
-Add to `bin-led-reminder/tests/test_colours.py` (near the other service-logic tests, after `_run_display` helper definitions):
+In `bin-led-reminder/tests/test_colours.py`, replace:
 
 ```python
-def _make_service_with_data(collections):
-    """Construct a BinLEDService whose load_data() returns fixed collections."""
-    from bin_led_service import BinLEDService
-    service = BinLEDService.__new__(BinLEDService)
-    service.logger = logging.getLogger('test')
-    service.load_data = lambda: {'collections': collections}
-    return service
+def test_detect_schedule_skips_black_bag_when_finding_next_date():
+    """Black Bag on day N must not anchor the reminder window away from day N+1."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    real_bin_date = today + timedelta(days=1)
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'Blue Bin'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is not None
+    assert result['collection_date'] == real_bin_date
+    assert result['bins_due'] == ['Blue Bin']
 
 
-def test_food_caddy_excluded_from_bins_due():
-    collections = [
-        {
-            'date': 'Thu - 30 Jul 2026',
-            'date_parsed': '2026-07-30T00:00:00',
-            'bin_type': 'OUTDOOR FOOD CADDY',
-            'day_of_week': 'Thursday',
-        },
-        {
-            'date': 'Thu - 30 Jul 2026',
-            'date_parsed': '2026-07-30T00:00:00',
-            'bin_type': 'GARDEN WASTE BIN',
-            'day_of_week': 'Thursday',
-        },
-    ]
-    service = _make_service_with_data(collections)
-    with patch('bin_led_service.datetime') as mock_dt:
-        mock_dt.now.return_value = datetime(2026, 7, 25)
-        mock_dt.fromisoformat = datetime.fromisoformat
-        schedule = service.detect_collection_schedule()
-    assert schedule['bins_due'] == ['GARDEN WASTE BIN']
+def test_detect_schedule_black_bag_only_returns_none():
+    """If only Black Bag collections remain, no reminder should fire."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+with:
 
-Run: `cd bin-led-reminder && python -m pytest tests/test_colours.py::test_food_caddy_excluded_from_bins_due -v`
-Expected: FAIL — `bins_due` still contains `'OUTDOOR FOOD CADDY'` because the service still filters on `'Black Bag'`.
+```python
+def test_detect_schedule_skips_food_caddy_when_finding_next_date():
+    """Food Caddy on day N must not anchor the reminder window away from day N+1."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    real_bin_date = today + timedelta(days=1)
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
+            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'GARDEN WASTE BIN'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is not None
+    assert result['collection_date'] == real_bin_date
+    assert result['bins_due'] == ['GARDEN WASTE BIN']
+
+
+def test_detect_schedule_food_caddy_only_returns_none():
+    """If only Outdoor Food Caddy collections remain, no reminder should fire."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is None
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `cd bin-led-reminder && python -m pytest tests/test_colours.py::test_detect_schedule_skips_food_caddy_when_finding_next_date tests/test_colours.py::test_detect_schedule_food_caddy_only_returns_none -v`
+Expected: FAIL — `detect_collection_schedule()` still filters on `"Black Bag"`, so `'OUTDOOR FOOD CADDY'` entries aren't excluded (the first test's `bins_due` will incorrectly include it, and the second test's `result` will be non-`None` since the Food Caddy entry isn't recognised as ignorable).
 
 - [ ] **Step 3: Update `detect_collection_schedule()`**
 
 In `bin-led-reminder/bin_led_service.py`, find:
 
 ```python
-        # Get bin types for this week (excluding Black Bag)
+        # Find the next date that has at least one non-Black-Bag collection.
+        # Iterating the sorted schedule and skipping Black Bag entries means a
+        # Black Bag-only day (e.g. the day before the real bin day) never
+        # incorrectly anchors the reminder window.
+        next_date = None
+        for collection in data['collections']:
+            try:
+                collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            except ValueError:
+                continue
+            if collection_date >= today and "Black Bag" not in collection['bin_type']:
+                next_date = collection_date
+                break
+
+        if not next_date:
+            return None
+
         bins_due = []
-        for collection in this_week:
-            bin_type = collection['bin_type']
-            if "Black Bag" not in bin_type:
-                bins_due.append(bin_type)
+        for collection in data['collections']:
+            try:
+                if datetime.fromisoformat(collection['date_parsed']).date() == next_date:
+                    bin_type = collection['bin_type']
+                    if "Black Bag" not in bin_type:
+                        bins_due.append(bin_type)
+            except ValueError:
+                continue
 ```
 
 Replace with:
 
 ```python
-        # Get bin types for this week (excluding Outdoor Food Caddy, which
-        # is collected every week and isn't worth a reminder)
+        # Find the next date that has at least one non-Food-Caddy collection.
+        # Iterating the sorted schedule and skipping Food Caddy entries means
+        # a Food-Caddy-only day (it's collected every week) never incorrectly
+        # anchors the reminder window.
+        next_date = None
+        for collection in data['collections']:
+            try:
+                collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            except ValueError:
+                continue
+            if collection_date >= today and "OUTDOOR FOOD CADDY" not in collection['bin_type']:
+                next_date = collection_date
+                break
+
+        if not next_date:
+            return None
+
         bins_due = []
-        for collection in this_week:
-            bin_type = collection['bin_type']
-            if "OUTDOOR FOOD CADDY" not in bin_type:
-                bins_due.append(bin_type)
+        for collection in data['collections']:
+            try:
+                if datetime.fromisoformat(collection['date_parsed']).date() == next_date:
+                    bin_type = collection['bin_type']
+                    if "OUTDOOR FOOD CADDY" not in bin_type:
+                        bins_due.append(bin_type)
+            except ValueError:
+                continue
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
