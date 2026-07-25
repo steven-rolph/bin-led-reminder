@@ -354,6 +354,11 @@ class BinLEDService:
                 # still needs to be checked for the error path below.
                 ordered_bins += [b for b in bins_due if b not in priority_order]
 
+                if len(ordered_bins) > 2:
+                    dropped = ordered_bins[2:]
+                    self.logger.warning(f"More than two bins due — dropped {dropped} from LED display")
+                    ordered_bins = ordered_bins[:2]
+
                 unrecognised = [b for b in ordered_bins if BIN_COLOURS.get(b) is None]
                 if unrecognised:
                     self.logger.error(f"Unrecognised bin type '{unrecognised[0]}' — treating as error")
@@ -365,10 +370,6 @@ class BinLEDService:
                     blinkt.show()
                     self.logger.info(f"LEDs set for {ordered_bins[0]}")
                 else:
-                    if len(ordered_bins) > 2:
-                        dropped = ordered_bins[2:]
-                        self.logger.warning(f"More than two bins due — dropped {dropped} from LED display")
-                        ordered_bins = ordered_bins[:2]
                     first_colour = BIN_COLOURS[ordered_bins[0]]
                     second_colour = BIN_COLOURS[ordered_bins[1]]
                     brightness = self.config['led_brightness']
