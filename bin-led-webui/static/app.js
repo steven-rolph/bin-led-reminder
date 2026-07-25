@@ -2,7 +2,7 @@ import { h, render } from 'https://esm.sh/preact@10';
 import { useState, useEffect, useCallback } from 'https://esm.sh/preact@10/hooks';
 import { html } from 'https://esm.sh/htm@3/preact';
 import {
-  COLOUR_BIN_GREEN, COLOUR_BIN_BLACK_BAG,
+  COLOUR_BIN_GREEN, COLOUR_MUTED_DOT,
   COLOUR_ERROR, COLOUR_LEDS_ACTIVE, COLOUR_LED_OFF, COLOUR_FLASH_WHITE,
   COLOUR_SUCCESS, COLOUR_FAILURE, COLOUR_MUTED,
   BIN_COLOURS, TEST_COLOUR_HEX,
@@ -14,14 +14,15 @@ function binColour(binType) {
   return BIN_COLOURS[binType] || COLOUR_MUTED;
 }
 
-function ledVisualiserColour(status, testColour) {
-  if (testColour) return TEST_COLOUR_HEX[testColour];
-  if (status.has_error) return COLOUR_ERROR;
+function ledVisualiserColours(status, testColour) {
+  if (testColour) return [TEST_COLOUR_HEX[testColour]];
+  if (status.has_error) return [COLOUR_ERROR];
   if (status.leds_active) {
-    const bt = status.next_collection?.bin_type;
-    return BIN_COLOURS[bt] || COLOUR_FLASH_WHITE;
+    const types = (status.next_collections || []).map(c => c.bin_type);
+    const colours = types.map(t => BIN_COLOURS[t]).filter(Boolean);
+    return colours.length ? colours : [COLOUR_FLASH_WHITE];
   }
-  return null;
+  return [];
 }
 
 async function api(method, path, body) {
@@ -40,10 +41,20 @@ async function api(method, path, body) {
 
 // --- Sub-components ---
 
+function nextCollectionBadge(col) {
+  return col.days_until > 1
+    ? `${col.days_until} days`
+    : col.hours_until != null && col.hours_until < 1
+    ? (col.days_until === 0 ? 'Due now' : 'Tomorrow')
+    : col.hours_until != null
+    ? `${col.days_until === 1 ? 'Tomorrow' : 'Today'} (in ${col.hours_until}h)`
+    : col.days_until === 0 ? 'Today' : 'Tomorrow';
+}
+
 function StatusCard({ status }) {
   if (!status) return html`<article aria-busy="true">Loading status...</article>`;
 
-  const { led_service_running, has_error, error_details, next_collection, leds_active } = status;
+  const { led_service_running, has_error, error_details, next_collections, leds_active, last_scraped } = status;
 
   return html`
     <article>
@@ -61,23 +72,23 @@ function StatusCard({ status }) {
         LED service: <strong>${led_service_running ? 'Running' : 'Stopped'}</strong>
       </p>
       <p>
-        <span class="status-dot" style=${{ background: leds_active ? COLOUR_LEDS_ACTIVE : COLOUR_BIN_BLACK_BAG }}></span>
+        <span class="status-dot" style=${{ background: leds_active ? COLOUR_LEDS_ACTIVE : COLOUR_MUTED_DOT }}></span>
         LEDs: <strong>${leds_active ? 'Active' : 'Off'}</strong>
       </p>
 
-      ${next_collection && html`
+      ${next_collections && next_collections.map(col => html`
+        <p key=${col.bin_type}>
+          <span class="bin-dot" style=${{ background: binColour(col.bin_type) }}></span>
+          Next: <strong>${col.bin_type}</strong> — ${col.date}
+          <span class="days-badge">${nextCollectionBadge(col)}</span>
+        </p>
+      `)}
+
+      ${last_scraped && html`
         <p>
-          <span class="bin-dot" style=${{ background: binColour(next_collection.bin_type) }}></span>
-          Next: <strong>${next_collection.bin_type}</strong> — ${next_collection.date}
-          <span class="days-badge">
-            ${next_collection.days_until > 1
-              ? `${next_collection.days_until} days`
-              : next_collection.hours_until != null && next_collection.hours_until < 1
-              ? (next_collection.days_until === 0 ? 'Due now' : 'Tomorrow')
-              : next_collection.hours_until != null
-              ? `${next_collection.days_until === 1 ? 'Tomorrow' : 'Today'} (in ${next_collection.hours_until}h)`
-              : next_collection.days_until === 0 ? 'Today' : 'Tomorrow'}
-          </span>
+          <small style=${{ color: COLOUR_MUTED_DOT }}>
+            Last scraped: ${new Date(last_scraped).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          </small>
         </p>
       `}
     </article>
@@ -88,7 +99,7 @@ function UpcomingCollections({ schedule }) {
   if (!schedule) return html`<article aria-busy="true">Loading schedule...</article>`;
 
   const upcoming = schedule.collections
-    .filter(c => c.bin_type !== 'Black Bag')
+    .filter(c => c.bin_type !== 'OUTDOOR FOOD CADDY')
     .slice(0, 6);
 
   return html`
@@ -208,13 +219,13 @@ function ServiceControls({ onAction, serviceRunning, onTestFlash, ledBrightness 
         >Test LEDs</button>
       </div>
       ${serviceRunning !== false && html`
-        <small style=${{ color: COLOUR_BIN_BLACK_BAG }}>Stop the LED service to enable test controls</small>
+        <small style=${{ color: COLOUR_MUTED_DOT }}>Stop the LED service to enable test controls</small>
       `}
     </article>
   `;
 }
 
-function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
+function ConfigPanel({ ledColours, ledBrightness, serviceRunning }) {
   const [config, setConfig] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -262,14 +273,17 @@ function ConfigPanel({ ledColour, ledBrightness, serviceRunning }) {
       <header><strong>Configuration</strong></header>
       <div class="led-strip">
         ${[0,1,2,3,4,5,6,7].map(i => {
-          const isLit = ledColour !== null;
+          const isLit = ledColours.length > 0;
+          const colour = ledColours.length === 2
+            ? (i < 4 ? ledColours[0] : ledColours[1])
+            : ledColours[0];
           return html`<div
             key=${i}
             class="led-square"
             style=${{
-              backgroundColor: isLit ? ledColour : COLOUR_LED_OFF,
+              backgroundColor: isLit ? colour : COLOUR_LED_OFF,
               opacity: isLit ? ledBrightness : 1,
-              boxShadow: isLit ? `0 0 10px 3px ${ledColour}` : 'none',
+              boxShadow: isLit ? `0 0 10px 3px ${colour}` : 'none',
             }}
           ></div>`;
         })}
@@ -426,7 +440,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const ledColour = status ? ledVisualiserColour(status, testColour) : null;
+  const ledColours = status ? ledVisualiserColours(status, testColour) : [];
 
   return html`
     <main>
@@ -440,7 +454,7 @@ function App() {
         ledBrightness=${config?.led_brightness ?? 0.1}
       />
       <${ConfigPanel}
-        ledColour=${ledColour}
+        ledColours=${ledColours}
         ledBrightness=${config?.led_brightness ?? 0.1}
         serviceRunning=${status?.led_service_running}
       />
