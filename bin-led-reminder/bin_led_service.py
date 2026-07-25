@@ -345,17 +345,39 @@ class BinLEDService:
             
             if bins_due:
                 self.logger.info(f"Reminder active! Bins due: {bins_due}")
-                
-                primary_bin = bins_due[0]
-                colour = BIN_COLOURS.get(primary_bin)
-                if colour:
-                    blinkt.set_all(*colour, self.config['led_brightness'])
-                    blinkt.show()
-                    self.logger.info(f"LEDs set for {primary_bin}")
-                else:
-                    self.logger.error(f"Unrecognised bin type '{primary_bin}' — treating as error")
+
+                # Fixed priority order keeps the split stable across runs,
+                # independent of scrape/list order.
+                priority_order = ['GARDEN WASTE BIN', 'RUBBISH BIN - 180L', 'RECYCLING BIN - 240L']
+                ordered_bins = [b for b in priority_order if b in bins_due]
+                # Any bin type not in the known priority list (unrecognised)
+                # still needs to be checked for the error path below.
+                ordered_bins += [b for b in bins_due if b not in priority_order]
+
+                unrecognised = [b for b in ordered_bins if BIN_COLOURS.get(b) is None]
+                if unrecognised:
+                    self.logger.error(f"Unrecognised bin type '{unrecognised[0]}' — treating as error")
                     blinkt.set_all(*COLOUR_ERROR, self.config['led_brightness'])
                     blinkt.show()
+                elif len(ordered_bins) == 1:
+                    colour = BIN_COLOURS[ordered_bins[0]]
+                    blinkt.set_all(*colour, self.config['led_brightness'])
+                    blinkt.show()
+                    self.logger.info(f"LEDs set for {ordered_bins[0]}")
+                else:
+                    if len(ordered_bins) > 2:
+                        dropped = ordered_bins[2:]
+                        self.logger.warning(f"More than two bins due — dropped {dropped} from LED display")
+                        ordered_bins = ordered_bins[:2]
+                    first_colour = BIN_COLOURS[ordered_bins[0]]
+                    second_colour = BIN_COLOURS[ordered_bins[1]]
+                    brightness = self.config['led_brightness']
+                    for i in range(4):
+                        blinkt.set_pixel(i, *first_colour, brightness)
+                    for i in range(4, 8):
+                        blinkt.set_pixel(i, *second_colour, brightness)
+                    blinkt.show()
+                    self.logger.info(f"LEDs split: {ordered_bins[0]} (0-3), {ordered_bins[1]} (4-7)")
             else:
                 blinkt.clear()
                 blinkt.show()

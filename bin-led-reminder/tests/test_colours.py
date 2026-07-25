@@ -9,7 +9,7 @@ import logging
 import pathlib
 import sys
 from datetime import date, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 # Mock blinkt before any service import — it is Pi-only hardware
 _blinkt = MagicMock()
@@ -182,6 +182,42 @@ def test_detect_schedule_food_caddy_only_returns_none():
             mock_dt.fromisoformat = datetime.fromisoformat
             result = service.detect_collection_schedule()
     assert result is None
+
+
+def _run_display_multi(bin_types):
+    """Run update_led_display() with multiple bins due on the same date."""
+    _blinkt.reset_mock()
+    service = _make_service()
+    schedule = {'collection_date': _COLLECTION_DATE, 'bins_due': bin_types}
+    with patch.object(service, 'detect_collection_schedule', return_value=schedule):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.combine = datetime.combine
+            mock_dt.min = datetime.min
+            service.update_led_display()
+    return service
+
+
+def test_two_bins_due_splits_leds_into_two_colour_blocks():
+    _run_display_multi(['GARDEN WASTE BIN', 'RUBBISH BIN - 180L'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    _blinkt.set_all.assert_not_called()
+    _blinkt.show.assert_called()
+
+
+def test_three_bins_due_uses_first_two_by_priority(caplog):
+    with caplog.at_level(logging.WARNING):
+        _run_display_multi(['RECYCLING BIN - 240L', 'GARDEN WASTE BIN', 'RUBBISH BIN - 180L'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    assert 'dropped' in caplog.text.lower()
 
 
 def test_leds_off_outside_reminder_window():
