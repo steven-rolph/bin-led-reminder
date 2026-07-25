@@ -210,6 +210,12 @@ brightness/current scenario already flagged as a stability risk.
   Rubbish routinely share a date — otherwise the UI text would silently
   disagree with what the split LEDs are actually showing. The status card
   renders one line per entry in the list instead of a single line.
+- The `ConfigPanel` LED strip visualiser (the 8 `led-square` divs mirroring
+  the physical Blinkt strip) is the most literal "what are the LEDs showing"
+  surface in the UI, so it gets the same treatment: when `next_collections`
+  has two entries, squares 0–3 render the first colour and squares 4–7 the
+  second, matching the Pi's split-pixel behaviour exactly (same halves, same
+  order). With one entry, all 8 squares render that single colour as today.
 
 ## Config changes
 
