@@ -220,6 +220,22 @@ def test_three_bins_due_uses_first_two_by_priority(caplog):
     assert 'dropped' in caplog.text.lower()
 
 
+def test_three_bins_due_with_unrecognised_third_bin_still_splits_leds(caplog):
+    """An unrecognised bin type that gets dropped as the excess 3rd bin must not
+    trigger the error path — only the top-2 priority bins should be checked."""
+    with caplog.at_level(logging.WARNING):
+        _run_display_multi(['GARDEN WASTE BIN', 'RUBBISH BIN - 180L', 'SOME NEW BIN TYPE'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    assert not any(
+        c == call(*COLOUR_ERROR, 0.1) for c in _blinkt.set_all.call_args_list
+    )
+    assert 'dropped' in caplog.text.lower()
+
+
 def test_leds_off_outside_reminder_window():
     """When now is outside the reminder window, LEDs should be cleared."""
     _blinkt.reset_mock()
