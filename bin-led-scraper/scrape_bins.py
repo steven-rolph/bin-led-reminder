@@ -10,6 +10,10 @@ the visible form fields rather than replaying the internal API payload
 directly. See:
 docs/superpowers/specs/2026-07-25-council-endpoint-migration-design.md
 
+The form itself is rendered inside an iframe (`<iframe class="achieveforms-iframe">`,
+populated client-side after the outer page loads) rather than directly on the
+page — field lookups must be scoped to that frame, not the top-level page.
+
 NOTE: the postcode-search trigger (Enter key vs. auto-search-as-you-type)
 was inferred, not directly observed, during investigation. If this script
 starts failing at the "waiting for address options" step, that's the first
@@ -46,11 +50,16 @@ def scrape_once(postcode: str, uprn: str) -> list[dict]:
         page = browser.new_page()
         page.goto(FORM_URL, wait_until="networkidle")
 
-        postcode_field = page.get_by_label("Please enter your postcode or street name")
+        # The form fields live inside an iframe (id="fillform-frame-1",
+        # class="achieveforms-iframe") populated by JS after the outer page
+        # loads — get_by_label on `page` directly never finds them.
+        form = page.frame_locator("iframe.achieveforms-iframe")
+
+        postcode_field = form.get_by_label("Please enter your postcode or street name")
         postcode_field.fill(postcode)
         postcode_field.press("Enter")
 
-        address_field = page.get_by_label("Select your address")
+        address_field = form.get_by_label("Select your address")
         address_field.wait_for(state="visible", timeout=15000)
         page.wait_for_function(
             "(el) => el.options && el.options.length > 1",
