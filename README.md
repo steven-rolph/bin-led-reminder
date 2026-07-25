@@ -28,6 +28,9 @@ bin-led-reminder/          ← repo root
 ├── .gitignore
 ├── README.md
 ├── CLAUDE.md              ← context for AI-assisted development
+├── auto-deploy.sh         ← git pull + restart-if-changed (run by the timer below)
+├── auto-deploy.service    ← oneshot systemd unit that runs auto-deploy.sh
+├── auto-deploy.timer      ← daily schedule for auto-deploy.service
 │
 ├── bin-led-reminder/      ← core LED service (always running)
 │   ├── bin_led_service.py
@@ -131,6 +134,32 @@ The web UI is **not** started automatically. Start it when you need it:
 
 Access at `http://<pi-ip>:8000`.
 
+### Auto-deploy (optional)
+
+`europa` keeps a real git clone of this repo (`origin` → this GitHub repo),
+so updates can be pulled automatically instead of deploying by hand each
+time. One-time setup:
+
+```bash
+cd ~/blinkt-projects/bin-led-reminder
+
+# Grant passwordless sudo for exactly the two restart commands the timer
+# needs — do NOT use NOPASSWD:ALL. Check your systemctl path first with
+# `which systemctl` (usually /usr/bin/systemctl on Raspberry Pi OS).
+sudo visudo -f /etc/sudoers.d/auto-deploy
+# add this line, substituting the real path if different:
+# pizero2 ALL=(root) NOPASSWD: /usr/bin/systemctl restart bin-led-reminder, /usr/bin/systemctl restart bin-led-webui
+
+sudo cp auto-deploy.service auto-deploy.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+./bin-led-reminder/manage.sh auto-deploy enable
+```
+
+This installs a daily timer that runs `git pull --ff-only` and restarts
+whichever services need it, only if something actually changed. See
+`CLAUDE.md`'s "Deployment workflow" section for how it behaves and how to
+fall back to a manual `git pull` if you want a change live immediately.
+
 ---
 
 ## Service management
@@ -148,6 +177,11 @@ All common operations are wrapped by `manage.sh` in `bin-led-reminder/`:
 ./manage.sh webui stop       # Stop web UI
 ./manage.sh webui status     # Web UI status
 ./manage.sh webui logs       # Live web UI log tail
+./manage.sh auto-deploy enable    # Turn on the daily auto-deploy timer
+./manage.sh auto-deploy status    # Timer state + next scheduled run
+./manage.sh auto-deploy logs      # Live auto-deploy log tail
+./manage.sh auto-deploy run-now   # Trigger a deploy check immediately
+./manage.sh auto-deploy disable   # Turn off the timer
 ```
 
 ---

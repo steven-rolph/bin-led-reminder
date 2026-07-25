@@ -22,6 +22,9 @@ bin-led-reminder/          ← repo root
 ├── .gitignore
 ├── README.md
 ├── CLAUDE.md              ← this file
+├── auto-deploy.sh         ← git pull + restart-if-changed, run by the timer below
+├── auto-deploy.service    ← oneshot systemd unit that runs auto-deploy.sh
+├── auto-deploy.timer      ← daily schedule for auto-deploy.service
 │
 ├── bin-led-reminder/      ← core LED service
 │   ├── bin_led_service.py
@@ -250,6 +253,31 @@ values.
 git preserves file modes, so pulled shell scripts keep their execute bit
 (unlike files copied over SFTP).
 
+**Automatic:** `auto-deploy.timer` runs `auto-deploy.sh` daily. It does a
+`git pull --ff-only`; if that lands new commits, it restarts
+`bin-led-reminder` (and `bin-led-webui` too, if it happens to be running).
+No-op if there's nothing new. Managed via `manage.sh`:
+
+```bash
+./manage.sh auto-deploy enable     # turn on the daily timer (one-time setup)
+./manage.sh auto-deploy status     # timer state + next scheduled run
+./manage.sh auto-deploy logs       # live log of pull/restart activity
+./manage.sh auto-deploy run-now    # trigger a check immediately
+./manage.sh auto-deploy disable    # turn it off
+```
+
+`--ff-only` means it never attempts to merge — if the Pi's working tree has
+diverged (e.g. something was edited directly on it), the pull fails loudly
+and visibly in `manage.sh auto-deploy logs` instead of guessing. The
+service runs as `pizero2` and needs passwordless `sudo` for exactly two
+commands (`systemctl restart bin-led-reminder` / `bin-led-webui`) — see
+`auto-deploy.service`'s `ExecStart` for what actually runs, and grant this
+via a scoped `/etc/sudoers.d/` entry (`visudo -f /etc/sudoers.d/auto-deploy`),
+not blanket `NOPASSWD:ALL`.
+
+**Manual** (for testing a change immediately, or if you'd rather not wait
+for the timer):
+
 1. Edit files locally or in Claude Code, commit, and push to `main`
 2. SSH into `europa` and run:
    ```bash
@@ -264,11 +292,10 @@ git preserves file modes, so pulled shell scripts keep their execute bit
    either changes — the web UI's bin-type matching and colour palette have to
    stay in sync with the LED service's taxonomy (see Colour constants above).
 
-This git clone can silently drift out of sync for months if `git pull` isn't
-run regularly (deploys are on-demand, not scheduled) — if the Pi's behaviour
-doesn't match what's on `main`, check `git status` and `git log -1` in
-`~/blinkt-projects/bin-led-reminder` before assuming the code is what you
-think it is.
+Before `auto-deploy.timer` existed, this git clone silently drifted months
+out of sync with `main` — if the Pi's behaviour ever doesn't match what's on
+`main` again, check `./manage.sh auto-deploy status` (is the timer actually
+enabled?) before assuming the code is what you think it is.
 
 ### Development environment
 
@@ -353,12 +380,6 @@ is slow and can OOM on the Pi Zero 2.
   hardcoded-ignored. An `ignore_outdoor_food_caddy` config flag (default
   `true`) would make the project usable for other councils or households that
   want the reminder.
-- **Automated deployment** — `git pull` on `europa` is manual today, with no
-  cron/systemd timer triggering it. The Pi's clone has drifted months behind
-  `main` before (caught during the Jul 2026 AchieveForms migration) purely
-  because nobody happened to SSH in and pull. An auto-pull timer would close
-  this gap but needs a decision on restart safety (e.g. don't restart
-  mid-reminder-window) before being built.
 - **Scraper resilience + health check API** — add a `GET /api/health` endpoint
   that reports scraper health: last successful scrape timestamp, row count
   returned, and whether it fell below a minimum threshold. A canary assertion

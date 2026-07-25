@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull latest bin-led-reminder code and restart services if changed
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=pizero2
+WorkingDirectory=/home/pizero2/blinkt-projects/bin-led-reminder
+ExecStart=/home/pizero2/blinkt-projects/bin-led-reminder/auto-deploy.sh

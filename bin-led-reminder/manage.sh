@@ -25,6 +25,13 @@ show_usage() {
     echo "  webui status   Show web UI service status"
     echo "  webui logs     Show live web UI logs"
     echo ""
+    echo "Auto-deploy commands:"
+    echo "  auto-deploy enable    Enable the daily git-pull-and-restart timer"
+    echo "  auto-deploy disable   Disable the timer"
+    echo "  auto-deploy status    Show timer status and next scheduled run"
+    echo "  auto-deploy logs      Show live auto-deploy logs"
+    echo "  auto-deploy run-now   Trigger a deploy check immediately"
+    echo ""
 }
 
 case "$1" in
@@ -104,6 +111,37 @@ case "$1" in
                 ;;
             *)
                 echo "Usage: $0 webui {start|stop|restart|status|logs}"
+                exit 1
+                ;;
+        esac
+        ;;
+    auto-deploy)
+        case "$2" in
+            enable)
+                echo "⚡ Enabling daily auto-deploy timer..."
+                sudo systemctl enable --now auto-deploy.timer
+                systemctl list-timers auto-deploy.timer --no-pager
+                ;;
+            disable)
+                echo "🚫 Disabling auto-deploy timer..."
+                sudo systemctl disable --now auto-deploy.timer
+                ;;
+            status)
+                systemctl status auto-deploy.timer --no-pager
+                echo ""
+                systemctl list-timers auto-deploy.timer --no-pager
+                ;;
+            logs)
+                echo "📖 Live auto-deploy logs (Ctrl+C to exit):"
+                sudo journalctl -u auto-deploy.service -f
+                ;;
+            run-now)
+                echo "🔄 Running auto-deploy check now..."
+                sudo systemctl start auto-deploy.service
+                sudo journalctl -u auto-deploy.service --no-pager -n 10
+                ;;
+            *)
+                echo "Usage: $0 auto-deploy {enable|disable|status|logs|run-now}"
                 exit 1
                 ;;
         esac
