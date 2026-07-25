@@ -254,23 +254,41 @@ class BinLEDService:
         Detect the next collection date and which bins are due.
         Returns dict with collection_date (datetime.date) and bins_due.
         """
-        next_collection = self.get_next_collection()
-        if not next_collection:
+        data = self.load_data()
+        if not data:
             return None
 
-        this_week = self.get_this_weeks_collections()
+        today = datetime.now().date()
 
-        collection_date = datetime.fromisoformat(next_collection['date_parsed']).date()
+        # Find the next date that has at least one non-Black-Bag collection.
+        # Iterating the sorted schedule and skipping Black Bag entries means a
+        # Black Bag-only day (e.g. the day before the real bin day) never
+        # incorrectly anchors the reminder window.
+        next_date = None
+        for collection in data['collections']:
+            try:
+                collection_date = datetime.fromisoformat(collection['date_parsed']).date()
+            except ValueError:
+                continue
+            if collection_date >= today and "Black Bag" not in collection['bin_type']:
+                next_date = collection_date
+                break
 
-        # Get bin types for this week (excluding Black Bag)
+        if not next_date:
+            return None
+
         bins_due = []
-        for collection in this_week:
-            bin_type = collection['bin_type']
-            if "Black Bag" not in bin_type:
-                bins_due.append(bin_type)
+        for collection in data['collections']:
+            try:
+                if datetime.fromisoformat(collection['date_parsed']).date() == next_date:
+                    bin_type = collection['bin_type']
+                    if "Black Bag" not in bin_type:
+                        bins_due.append(bin_type)
+            except ValueError:
+                continue
 
         return {
-            'collection_date': collection_date,
+            'collection_date': next_date,
             'bins_due': list(dict.fromkeys(bins_due)),  # Deduplicate, preserving order
         }
 
