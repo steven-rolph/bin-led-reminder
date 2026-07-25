@@ -1,0 +1,98 @@
+{
+  "metadata": {
+    "last_updated": "2026-07-25T14:42:54.917945",
+    "total_collections": 15
+  },
+  "collections": [
+    {
+      "date": "Thu - 30 Jul 2026",
+      "date_parsed": "2026-07-30T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 30 Jul 2026",
+      "date_parsed": "2026-07-30T00:00:00",
+      "bin_type": "GARDEN WASTE BIN",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 30 Jul 2026",
+      "date_parsed": "2026-07-30T00:00:00",
+      "bin_type": "RUBBISH BIN - 180L",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 06 Aug 2026",
+      "date_parsed": "2026-08-06T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 06 Aug 2026",
+      "date_parsed": "2026-08-06T00:00:00",
+      "bin_type": "RECYCLING BIN - 240L",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 13 Aug 2026",
+      "date_parsed": "2026-08-13T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 13 Aug 2026",
+      "date_parsed": "2026-08-13T00:00:00",
+      "bin_type": "RUBBISH BIN - 180L",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 13 Aug 2026",
+      "date_parsed": "2026-08-13T00:00:00",
+      "bin_type": "GARDEN WASTE BIN",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 20 Aug 2026",
+      "date_parsed": "2026-08-20T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 20 Aug 2026",
+      "date_parsed": "2026-08-20T00:00:00",
+      "bin_type": "RECYCLING BIN - 240L",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 27 Aug 2026",
+      "date_parsed": "2026-08-27T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 27 Aug 2026",
+      "date_parsed": "2026-08-27T00:00:00",
+      "bin_type": "RUBBISH BIN - 180L",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 27 Aug 2026",
+      "date_parsed": "2026-08-27T00:00:00",
+      "bin_type": "GARDEN WASTE BIN",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Fri - 04 Sep 2026",
+      "date_parsed": "2026-09-04T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Friday"
+    },
+    {
+      "date": "Fri - 04 Sep 2026",
+      "date_parsed": "2026-09-04T00:00:00",
+      "bin_type": "RECYCLING BIN - 240L",
+      "day_of_week": "Friday"
+    }
+  ]
+}
