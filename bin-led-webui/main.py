@@ -45,6 +45,10 @@ except OSError:
 # Keys that can be updated via PATCH /api/config
 EDITABLE_CONFIG_KEYS = {"led_brightness", "check_interval_hours", "update_interval_weeks", "log_level", "reminder_start_hours_before", "reminder_end_hours_after"}
 
+# Keep in sync with priority_order in bin_led_service.py's update_led_display() —
+# ensures the web UI's colour-half ordering never contradicts the physical LEDs.
+BIN_PRIORITY_ORDER = ['GARDEN WASTE BIN', 'RUBBISH BIN - 180L', 'RECYCLING BIN - 240L']
+
 # Keep in sync with TEST_COLOUR_HEX in bin-led-webui/static/consts.js
 # and the general palette in bin-led-reminder/constants.py.
 TEST_COLOURS = {
@@ -86,6 +90,14 @@ def _hours_until(date_str: str) -> int | None:
         return max(0, int(delta.total_seconds() // 3600))
     except ValueError:
         return None
+
+
+def _priority_index(bin_type: str) -> int:
+    """Index of bin_type in BIN_PRIORITY_ORDER, or len(...) if unknown (sorts last)."""
+    try:
+        return BIN_PRIORITY_ORDER.index(bin_type)
+    except ValueError:
+        return len(BIN_PRIORITY_ORDER)
 
 
 def _leds_active(collections: list) -> bool:
@@ -195,6 +207,11 @@ def get_status():
             "days_until": days,
             "hours_until": _hours_until(col["date"]),
         })
+
+    # Sort to match the Pi's fixed LED priority order — otherwise the web UI's
+    # colour-half preview could show the two halves swapped relative to the
+    # physical device if the source data lists bins in a different order.
+    next_collections.sort(key=lambda c: _priority_index(c["bin_type"]))
 
     last_scraped = (schedule_data or {}).get("metadata", {}).get("last_updated")
 
