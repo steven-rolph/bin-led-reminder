@@ -41,3 +41,9 @@ Thumbs.db
 # ── Claude Code ───────────────────────────────────────────────────────────────
 .claude/
 .superpowers/
+
+# ── Planning docs ─────────────────────────────────────────────────────────────
+# Design specs and implementation plans are working documents, not project
+# reference material, and this repo is public — they may quote real config
+# values or internal details not meant to be published. Keep locally only.
+docs/
