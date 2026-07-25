@@ -203,6 +203,13 @@ brightness/current scenario already flagged as a stability risk.
   `metadata.last_updated` from the schedule file). Surfaced in the UI status
   card as a small "Last scraped: <date>" line — a plain display of existing
   data, no new polling or alerting logic.
+- `GET /api/status`'s singular `next_collection` becomes `next_collections`
+  (a list): the loop that previously broke on the first non-ignored match
+  instead collects every non-ignored collection sharing the same next
+  upcoming date. This keeps the status card honest once Garden Waste and
+  Rubbish routinely share a date — otherwise the UI text would silently
+  disagree with what the split LEDs are actually showing. The status card
+  renders one line per entry in the list instead of a single line.
 
 ## Config changes
 
