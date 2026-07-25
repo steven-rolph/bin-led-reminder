@@ -8,9 +8,10 @@ when the structure, stack, or conventions change.
 ## Project purpose
 
 A "set and forget" bin collection reminder for a Raspberry Pi Zero 2 W
-(`europa`, user `pizero2`). Scrapes East Cambridgeshire District Council's bin
-schedule and drives a Pimoroni Blinkt! (8 × APA102 RGB LEDs on the GPIO header)
-to show a colour-coded reminder the evening before collection day.
+(`europa`, user `pizero2`). Fetches East Cambridgeshire District Council's bin
+schedule (pre-scraped weekly by `bin-led-scraper/` via GitHub Actions) and
+drives a Pimoroni Blinkt! (8 × APA102 RGB LEDs on the GPIO header) to show a
+colour-coded reminder the evening before collection day.
 
 ---
 
@@ -27,7 +28,7 @@ bin-led-reminder/          ← repo root
 │   ├── constants.py       ← LED colour definitions (single source of truth)
 │   ├── bin-led-reminder.service
 │   ├── config.example.json
-│   ├── config.json        ← gitignored (contains UPRN)
+│   ├── config.json        ← gitignored
 │   ├── requirements.txt
 │   ├── install.sh
 │   ├── manage.sh
@@ -35,23 +36,31 @@ bin-led-reminder/          ← repo root
 │       ├── test_leds.py   ← Pi hardware test (requires blinkt)
 │       └── test_colours.py ← unit tests (runs on any machine, mocks blinkt)
 │
-└── bin-led-webui/         ← optional dashboard
-    ├── main.py
-    ├── bin-led-webui.service
+├── bin-led-webui/         ← optional dashboard
+│   ├── main.py
+│   ├── bin-led-webui.service
+│   ├── requirements.txt
+│   ├── install_web.sh
+│   └── static/
+│       ├── index.html
+│       ├── app.js
+│       ├── consts.js
+│       └── pico.min.css
+│
+└── bin-led-scraper/       ← weekly GitHub Actions scraper (headless browser)
+    ├── scrape_bins.py
     ├── requirements.txt
-    ├── install_web.sh
-    └── static/
-        ├── index.html
-        ├── app.js
-        ├── consts.js
-        └── pico.min.css
+    └── data/
+        └── recycling_schedule.json   ← committed output, fetched by the Pi
 ```
+
+(`config.json` no longer contains a UPRN — see the config table update below.)
 
 ### Gitignored runtime files (in `bin-led-reminder/`)
 
 | File | Description |
 |---|---|
-| `config.json` | Live config — contains home address UPRN |
+| `config.json` | Live config |
 | `recycling_schedule.json` | Cached scrape output |
 | `error_state.json` | Transient error flag written by the LED service |
 | `logs/bin_led_service.log` | LED service log |
@@ -75,7 +84,7 @@ bin-led-reminder/          ← repo root
 |---|---|
 | Language | Python 3.11+ |
 | LED driver | `blinkt` (Pimoroni library, piwheels) |
-| HTTP scraping | `requests` + `beautifulsoup4` |
+| HTTP fetch | `requests` (fetches pre-scraped JSON; no scraping on the Pi) |
 | Process manager | systemd (`bin-led-reminder.service`) |
 | Virtualenv | `~/blinkt-projects/blinkt-env/` (shared, one level above repo) |
 
@@ -95,6 +104,11 @@ bin-led-reminder/          ← repo root
 ## Service architecture
 
 ```
+GitHub Actions (weekly cron)
+  └─ bin-led-scraper/scrape_bins.py → commits
+       bin-led-scraper/data/recycling_schedule.json
+                    │
+                    ▼ Pi fetches via base_url (plain HTTPS GET)
 systemd
   ├── bin-led-reminder.service   ← always running, source of truth
   └── bin-led-webui.service      ← started on demand via manage.sh
@@ -113,22 +127,28 @@ itself requires `./manage.sh webui {start|stop|restart}` directly on the device.
 
 | Colour | Trigger |
 |---|---|
-| Green | Green or Brown Bin due |
-| Blue | Blue Bin (recycling) due |
-| Red | Error state (scrape failed, service fault) |
+| Green | Garden Waste Bin due |
+| Orange | Rubbish Bin - 180L (general waste) due |
+| Blue | Recycling Bin - 240L due |
+| Red | Error state (fetch failed, service fault) |
 | Off | No collection imminent |
 
-Black Bag collections are intentionally ignored — they happen every week and
-don't need a reminder. See `recycling_schedule.json` for bin type strings.
+Outdoor Food Caddy collections are intentionally ignored — they happen every
+week and don't need a reminder. See `recycling_schedule.json` for bin type
+strings.
+
+**Same-date split display:** Garden Waste and Rubbish routinely share a
+collection date (the council's "Green week"). When two bins are due on the
+same date, `update_led_display()` splits the 8 LEDs into two colour blocks
+(pixels 0–3, pixels 4–7) via `blinkt.set_pixel()` rather than picking one
+colour with `bins_due[0]`. Priority order (which bin gets which half) is
+fixed: Garden Waste, then Rubbish, then Recycling — see
+`bin_led_service.py`'s `update_led_display()`.
 
 **Reminder window:** configurable via `reminder_start_hours_before` (default 24) and
 `reminder_end_hours_after` (default 1). At defaults: (collection_date − 24 h) at 00:00 →
 collection_date at 01:00. Derived directly from `date_parsed` — no hardcoded day names.
 Works automatically for any collection day regardless of bank holiday shifts.
-
-When both a Blue Bin and a Green/Brown Bin fall on the same week, `bins_due[0]`
-determines the LED colour (Blue takes priority as it appears first in the
-council's schedule output).
 
 **Brightness:** Keep `led_brightness` low (0.05–0.15). The Pi Zero 2 powers the
 LEDs directly from GPIO and full brightness across all 8 LEDs can cause
@@ -157,9 +177,9 @@ There is no code generation or shared source — these must be kept in sync manu
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/status` | LED service state, error state, next collection, LEDs active |
+| `GET` | `/api/status` | LED service state, error state, next collections due, LEDs active, last scraped timestamp |
 | `GET` | `/api/schedule` | Upcoming collections (past entries filtered out, `days_until` recalculated at request time) |
-| `GET` | `/api/config` | Editable config fields (`uprn` and `base_url` are read-only and omitted from `PATCH`) |
+| `GET` | `/api/config` | Editable config fields (`base_url` is read-only and omitted from `PATCH`) |
 | `PATCH` | `/api/config` | Update: `led_brightness`, `check_interval_hours`, `update_interval_weeks`, `log_level`, `reminder_start_hours_before`, `reminder_end_hours_after` |
 | `GET` | `/api/logs?lines=50` | Last N lines of LED service log (max 200) |
 | `POST` | `/api/service/{action}` | `start` / `stop` / `restart` / `clear-errors` / `force-update` |
@@ -173,16 +193,24 @@ prevent SPI bus contention.
 
 ## Data source
 
-The council website is scraped by UPRN (Unique Property Reference Number). The
-scraper targets `.collectionsrow` elements, skipping any row containing an
-iframe (the address selector). If the council redesigns their page,
-`scrape_collections()` in `bin_led_service.py` will need updating.
+East Cambridgeshire District Council's self-service portal (AchieveForms) is
+a fully client-rendered form gated by a session + short-lived captcha token —
+it cannot be scraped with a plain HTTP request the way the old Firmstep page
+could. `bin-led-scraper/scrape_bins.py` drives a real headless browser
+(Playwright) through the form on a weekly GitHub Actions schedule
+(`.github/workflows/scrape-bins.yml`) and commits the result to
+`bin-led-scraper/data/recycling_schedule.json`. `bin_led_service.py` fetches
+that file over plain HTTPS via `fetch_schedule_data()` — it no longer scrapes
+anything itself. If the council redesigns their form, the Playwright
+selectors in `scrape_bins.py` (currently `get_by_label(...)` calls keyed on
+the form's field labels) will need updating, not anything in
+`bin_led_service.py`.
 
 ---
 
 ## Error handling
 
-- Network/scrape failures set an error state (`error_state.json`) and turn LEDs red
+- Network/fetch failures set an error state (`error_state.json`) and turn LEDs red
 - Error state persists across restarts until explicitly cleared
 - To recover: `./manage.sh clear-errors` (deletes `error_state.json` and restarts)
 - In error state the service retries every 5 minutes instead of the normal 1-hour interval
@@ -262,10 +290,6 @@ is slow and can OOM on the Pi Zero 2.
 
 ## Known issues / tech debt
 
-- 🟢 **No mixed-colour indication** — when both Blue and Green bins are due on
-  the same collection date only `bins_due[0]` drives the LED colour. In practice
-  the council alternates them weekly so this hasn't occurred, but it's not
-  handled. Could pulse/alternate LEDs instead.
 - 🟢 **`manage.sh` uses a relative path for venv activation** — `source
   ../blinkt-env/bin/activate` works when run from `bin-led-reminder/` but fails
   silently if invoked from a different directory. Fix with `$SCRIPT_DIR`. Low
@@ -281,13 +305,10 @@ is slow and can OOM on the Pi Zero 2.
   window (e.g. 11pm–7am) via two new config fields (`night_dim_start`,
   `night_dim_end`, `night_dim_brightness`). Relevant given Pi Zero 2 power
   concerns at higher brightness.
-- **Schedule staleness indicator** — the web UI shows next collection but not
-  when `recycling_schedule.json` was last scraped. Expose `last_scraped` in
-  `GET /api/status` and surface it in the UI to catch silent scrape failures
-  before the error LED fires.
-- **Black Bag opt-in** — Black Bag collections are hardcoded-ignored. A
-  `ignore_black_bag` config flag (default `true`) would make the project usable
-  for other councils or households that want the reminder.
+- **Outdoor Food Caddy opt-in** — Outdoor Food Caddy collections are
+  hardcoded-ignored. An `ignore_outdoor_food_caddy` config flag (default
+  `true`) would make the project usable for other councils or households that
+  want the reminder.
 - **Scraper resilience + health check API** — add a `GET /api/health` endpoint
   that reports scraper health: last successful scrape timestamp, row count
   returned, and whether it fell below a minimum threshold. A canary assertion

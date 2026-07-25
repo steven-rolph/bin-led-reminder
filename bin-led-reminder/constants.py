@@ -21,6 +21,7 @@ COLOUR_ERROR  = COLOUR_RED   # red LEDs = error state
 # Keys must match bin_type strings exactly as they appear in recycling_schedule.json.
 # Add new bin types here when confirmed by the council.
 BIN_COLOURS = {
-    'Blue Bin':           COLOUR_BLUE,
-    'Green or Brown Bin': COLOUR_GREEN,
+    'RECYCLING BIN - 240L': COLOUR_BLUE,
+    'GARDEN WASTE BIN':     COLOUR_GREEN,
+    'RUBBISH BIN - 180L':   COLOUR_ORANGE,
 }

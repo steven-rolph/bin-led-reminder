@@ -5,11 +5,12 @@ Run with: python -m pytest tests/test_colours.py -v
 Mocks blinkt so the suite runs on any machine, not just the Pi.
 """
 
+import json
 import logging
 import pathlib
 import sys
 from datetime import date, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 # Mock blinkt before any service import — it is Pi-only hardware
 _blinkt = MagicMock()
@@ -61,17 +62,21 @@ def test_colour_error_is_red():
 
 # ── BIN_COLOURS mapping ────────────────────────────────────────────────────────
 
-def test_bin_colours_blue_bin_maps_to_blue():
-    assert BIN_COLOURS['Blue Bin'] == COLOUR_BLUE
+def test_bin_colours_recycling_maps_to_blue():
+    assert BIN_COLOURS['RECYCLING BIN - 240L'] == COLOUR_BLUE
 
 
-def test_bin_colours_green_bin_maps_to_green():
-    assert BIN_COLOURS['Green or Brown Bin'] == COLOUR_GREEN
+def test_bin_colours_garden_waste_maps_to_green():
+    assert BIN_COLOURS['GARDEN WASTE BIN'] == COLOUR_GREEN
 
 
-def test_black_bag_absent_from_bin_colours():
-    # Black Bag is filtered before lookup and must never drive the LEDs
-    assert 'Black Bag' not in BIN_COLOURS
+def test_bin_colours_rubbish_maps_to_orange():
+    assert BIN_COLOURS['RUBBISH BIN - 180L'] == COLOUR_ORANGE
+
+
+def test_food_caddy_absent_from_bin_colours():
+    # Outdoor Food Caddy is filtered before lookup and must never drive the LEDs
+    assert 'OUTDOOR FOOD CADDY' not in BIN_COLOURS
 
 
 def test_unknown_bin_type_returns_none():
@@ -116,15 +121,21 @@ def _run_display(bin_type):
     return service
 
 
-def test_blue_bin_sets_blue_leds():
-    _run_display('Blue Bin')
+def test_recycling_bin_sets_blue_leds():
+    _run_display('RECYCLING BIN - 240L')
     _blinkt.set_all.assert_called_once_with(*COLOUR_BLUE, 0.1)
     _blinkt.show.assert_called()
 
 
-def test_green_or_brown_bin_sets_green_leds():
-    _run_display('Green or Brown Bin')
+def test_garden_waste_bin_sets_green_leds():
+    _run_display('GARDEN WASTE BIN')
     _blinkt.set_all.assert_called_once_with(*COLOUR_GREEN, 0.1)
+    _blinkt.show.assert_called()
+
+
+def test_rubbish_bin_sets_orange_leds():
+    _run_display('RUBBISH BIN - 180L')
+    _blinkt.set_all.assert_called_once_with(*COLOUR_ORANGE, 0.1)
     _blinkt.show.assert_called()
 
 
@@ -136,15 +147,15 @@ def test_unknown_bin_sets_error_leds(caplog):
     assert 'Mystery Bin' in caplog.text
 
 
-def test_detect_schedule_skips_black_bag_when_finding_next_date():
-    """Black Bag on day N must not anchor the reminder window away from day N+1."""
+def test_detect_schedule_skips_food_caddy_when_finding_next_date():
+    """Food Caddy on day N must not anchor the reminder window away from day N+1."""
     service = _make_service()
     today = _FIXED_NOW.date()
     real_bin_date = today + timedelta(days=1)
     mock_data = {
         'collections': [
-            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
-            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'Blue Bin'},
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
+            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'GARDEN WASTE BIN'},
         ]
     }
     with patch.object(service, 'load_data', return_value=mock_data):
@@ -154,16 +165,16 @@ def test_detect_schedule_skips_black_bag_when_finding_next_date():
             result = service.detect_collection_schedule()
     assert result is not None
     assert result['collection_date'] == real_bin_date
-    assert result['bins_due'] == ['Blue Bin']
+    assert result['bins_due'] == ['GARDEN WASTE BIN']
 
 
-def test_detect_schedule_black_bag_only_returns_none():
-    """If only Black Bag collections remain, no reminder should fire."""
+def test_detect_schedule_food_caddy_only_returns_none():
+    """If only Outdoor Food Caddy collections remain, no reminder should fire."""
     service = _make_service()
     today = _FIXED_NOW.date()
     mock_data = {
         'collections': [
-            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
         ]
     }
     with patch.object(service, 'load_data', return_value=mock_data):
@@ -174,13 +185,114 @@ def test_detect_schedule_black_bag_only_returns_none():
     assert result is None
 
 
+def _run_display_multi(bin_types):
+    """Run update_led_display() with multiple bins due on the same date."""
+    _blinkt.reset_mock()
+    service = _make_service()
+    schedule = {'collection_date': _COLLECTION_DATE, 'bins_due': bin_types}
+    with patch.object(service, 'detect_collection_schedule', return_value=schedule):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.combine = datetime.combine
+            mock_dt.min = datetime.min
+            service.update_led_display()
+    return service
+
+
+def test_two_bins_due_splits_leds_into_two_colour_blocks():
+    _run_display_multi(['GARDEN WASTE BIN', 'RUBBISH BIN - 180L'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    _blinkt.set_all.assert_not_called()
+    _blinkt.show.assert_called()
+
+
+def test_three_bins_due_uses_first_two_by_priority(caplog):
+    with caplog.at_level(logging.WARNING):
+        _run_display_multi(['RECYCLING BIN - 240L', 'GARDEN WASTE BIN', 'RUBBISH BIN - 180L'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    assert 'dropped' in caplog.text.lower()
+
+
+def test_three_bins_due_with_unrecognised_third_bin_still_splits_leds(caplog):
+    """An unrecognised bin type that gets dropped as the excess 3rd bin must not
+    trigger the error path — only the top-2 priority bins should be checked."""
+    with caplog.at_level(logging.WARNING):
+        _run_display_multi(['GARDEN WASTE BIN', 'RUBBISH BIN - 180L', 'SOME NEW BIN TYPE'])
+    expected_calls = (
+        [call(i, *COLOUR_GREEN, 0.1) for i in range(4)]
+        + [call(i, *COLOUR_ORANGE, 0.1) for i in range(4, 8)]
+    )
+    _blinkt.set_pixel.assert_has_calls(expected_calls, any_order=False)
+    assert not any(
+        c == call(*COLOUR_ERROR, 0.1) for c in _blinkt.set_all.call_args_list
+    )
+    assert 'dropped' in caplog.text.lower()
+
+
+def test_fetch_schedule_data_returns_parsed_json():
+    from bin_led_service import BinLEDService
+    service = BinLEDService.__new__(BinLEDService)
+    service.config = {'base_url': 'https://example.invalid/recycling_schedule.json'}
+    service.logger = logging.getLogger('test')
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        'metadata': {'last_updated': '2026-07-20T06:00:00', 'total_collections': 1},
+        'collections': [{
+            'date': 'Thu - 30 Jul 2026',
+            'date_parsed': '2026-07-30T00:00:00',
+            'bin_type': 'GARDEN WASTE BIN',
+            'day_of_week': 'Thursday',
+        }],
+    }
+    mock_response.raise_for_status.return_value = None
+
+    with patch('bin_led_service.requests.get', return_value=mock_response) as mock_get:
+        data = service.fetch_schedule_data()
+
+    mock_get.assert_called_once()
+    assert mock_get.call_args.args[0] == 'https://example.invalid/recycling_schedule.json'
+    assert data['metadata']['last_updated'] == '2026-07-20T06:00:00'
+    assert data['collections'][0]['bin_type'] == 'GARDEN WASTE BIN'
+
+
+def test_save_data_preserves_fetched_metadata(tmp_path):
+    from bin_led_service import BinLEDService
+    service = BinLEDService.__new__(BinLEDService)
+    service.data_file = tmp_path / 'recycling_schedule.json'
+    service.logger = logging.getLogger('test')
+
+    fetched = {
+        'metadata': {'last_updated': '2026-07-20T06:00:00', 'total_collections': 1},
+        'collections': [{
+            'date': 'Thu - 30 Jul 2026',
+            'date_parsed': '2026-07-30T00:00:00',
+            'bin_type': 'GARDEN WASTE BIN',
+            'day_of_week': 'Thursday',
+        }],
+    }
+    service.save_data(fetched)
+
+    saved = json.loads(service.data_file.read_text())
+    assert saved['metadata']['last_updated'] == '2026-07-20T06:00:00'
+    assert saved['collections'][0]['bin_type'] == 'GARDEN WASTE BIN'
+
+
 def test_leds_off_outside_reminder_window():
     """When now is outside the reminder window, LEDs should be cleared."""
     _blinkt.reset_mock()
     service = _make_service()
     # Collection was two days ago — outside any window
     past_date = _FIXED_NOW.date() - timedelta(days=2)
-    schedule = {'collection_date': past_date, 'bins_due': ['Blue Bin']}
+    schedule = {'collection_date': past_date, 'bins_due': ['RECYCLING BIN - 240L']}
     with patch.object(service, 'detect_collection_schedule', return_value=schedule):
         with patch('bin_led_service.datetime') as mock_dt:
             mock_dt.now.return_value = _FIXED_NOW
