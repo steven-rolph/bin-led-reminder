@@ -146,15 +146,15 @@ def test_unknown_bin_sets_error_leds(caplog):
     assert 'Mystery Bin' in caplog.text
 
 
-def test_detect_schedule_skips_black_bag_when_finding_next_date():
-    """Black Bag on day N must not anchor the reminder window away from day N+1."""
+def test_detect_schedule_skips_food_caddy_when_finding_next_date():
+    """Food Caddy on day N must not anchor the reminder window away from day N+1."""
     service = _make_service()
     today = _FIXED_NOW.date()
     real_bin_date = today + timedelta(days=1)
     mock_data = {
         'collections': [
-            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
-            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'Blue Bin'},
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
+            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'GARDEN WASTE BIN'},
         ]
     }
     with patch.object(service, 'load_data', return_value=mock_data):
@@ -164,16 +164,16 @@ def test_detect_schedule_skips_black_bag_when_finding_next_date():
             result = service.detect_collection_schedule()
     assert result is not None
     assert result['collection_date'] == real_bin_date
-    assert result['bins_due'] == ['Blue Bin']
+    assert result['bins_due'] == ['GARDEN WASTE BIN']
 
 
-def test_detect_schedule_black_bag_only_returns_none():
-    """If only Black Bag collections remain, no reminder should fire."""
+def test_detect_schedule_food_caddy_only_returns_none():
+    """If only Outdoor Food Caddy collections remain, no reminder should fire."""
     service = _make_service()
     today = _FIXED_NOW.date()
     mock_data = {
         'collections': [
-            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+            {'date_parsed': today.isoformat(), 'bin_type': 'OUTDOOR FOOD CADDY'},
         ]
     }
     with patch.object(service, 'load_data', return_value=mock_data):

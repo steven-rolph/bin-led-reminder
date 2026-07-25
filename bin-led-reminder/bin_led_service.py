@@ -260,17 +260,17 @@ class BinLEDService:
 
         today = datetime.now().date()
 
-        # Find the next date that has at least one non-Black-Bag collection.
-        # Iterating the sorted schedule and skipping Black Bag entries means a
-        # Black Bag-only day (e.g. the day before the real bin day) never
-        # incorrectly anchors the reminder window.
+        # Find the next date that has at least one non-Food-Caddy collection.
+        # Iterating the sorted schedule and skipping Food Caddy entries means
+        # a Food-Caddy-only day (it's collected every week) never incorrectly
+        # anchors the reminder window.
         next_date = None
         for collection in data['collections']:
             try:
                 collection_date = datetime.fromisoformat(collection['date_parsed']).date()
             except ValueError:
                 continue
-            if collection_date >= today and "Black Bag" not in collection['bin_type']:
+            if collection_date >= today and "OUTDOOR FOOD CADDY" not in collection['bin_type']:
                 next_date = collection_date
                 break
 
@@ -282,7 +282,7 @@ class BinLEDService:
             try:
                 if datetime.fromisoformat(collection['date_parsed']).date() == next_date:
                     bin_type = collection['bin_type']
-                    if "Black Bag" not in bin_type:
+                    if "OUTDOOR FOOD CADDY" not in bin_type:
                         bins_due.append(bin_type)
             except ValueError:
                 continue
