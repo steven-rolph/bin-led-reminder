@@ -69,20 +69,13 @@ def scrape_once(postcode: str, uprn: str) -> list[dict]:
         )
         address_field.select_option(value=uprn)
 
-        # DEBUG (safe, boolean-only — never print postcode/UPRN/address data,
-        # this is a public repo and its Actions logs are publicly visible):
-        selected_value = address_field.evaluate("el => el.value")
-        print(f"DEBUG: address selection matched configured UPRN: {selected_value == uprn}", file=sys.stderr)
-        find_button = form.get_by_role("button", name="Find collection dates")
-        print(f"DEBUG: find-collection-dates button count={find_button.count()} visible={find_button.is_visible()}", file=sys.stderr)
-
         # Selecting the address does not itself trigger the schedule lookup —
         # a "Find collection dates" button appears once an address is picked
         # and must be clicked to fire the runLookup request.
         with page.expect_response(
             lambda r: "apibroker/runLookup" in r.url and "ScheduledStart" in r.text()
         ) as response_info:
-            find_button.click()
+            form.get_by_role("button", name="Find collection dates").click()
 
         payload = response_info.value.json()
         browser.close()

@@ -1,8 +1,9 @@
 # ── Runtime data ──────────────────────────────────────────────────────────────
 # These files are generated at runtime on the Pi and must never be committed.
-# recycling_schedule.json contains your UPRN; error_state.json is transient.
-recycling_schedule.json
-error_state.json
+# Scoped to bin-led-reminder/ specifically — bin-led-scraper/data/recycling_schedule.json
+# is a different file (the scraper's committed output) that must NOT be ignored.
+bin-led-reminder/recycling_schedule.json
+bin-led-reminder/error_state.json
 
 # ── Config ────────────────────────────────────────────────────────────────────
 # config.json contains your home address UPRN. Commit config.example.json
