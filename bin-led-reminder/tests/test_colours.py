@@ -136,6 +136,44 @@ def test_unknown_bin_sets_error_leds(caplog):
     assert 'Mystery Bin' in caplog.text
 
 
+def test_detect_schedule_skips_black_bag_when_finding_next_date():
+    """Black Bag on day N must not anchor the reminder window away from day N+1."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    real_bin_date = today + timedelta(days=1)
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+            {'date_parsed': real_bin_date.isoformat(), 'bin_type': 'Blue Bin'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is not None
+    assert result['collection_date'] == real_bin_date
+    assert result['bins_due'] == ['Blue Bin']
+
+
+def test_detect_schedule_black_bag_only_returns_none():
+    """If only Black Bag collections remain, no reminder should fire."""
+    service = _make_service()
+    today = _FIXED_NOW.date()
+    mock_data = {
+        'collections': [
+            {'date_parsed': today.isoformat(), 'bin_type': 'Black Bag Collection'},
+        ]
+    }
+    with patch.object(service, 'load_data', return_value=mock_data):
+        with patch('bin_led_service.datetime') as mock_dt:
+            mock_dt.now.return_value = _FIXED_NOW
+            mock_dt.fromisoformat = datetime.fromisoformat
+            result = service.detect_collection_schedule()
+    assert result is None
+
+
 def test_leds_off_outside_reminder_window():
     """When now is outside the reminder window, LEDs should be cleared."""
     _blinkt.reset_mock()
