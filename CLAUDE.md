@@ -47,11 +47,14 @@ bin-led-reminder/          ← repo root
 │       ├── consts.js
 │       └── pico.min.css
 │
-└── bin-led-scraper/       ← weekly GitHub Actions scraper (headless browser)
-    ├── scrape_bins.py
-    ├── requirements.txt
-    └── data/
-        └── recycling_schedule.json   ← committed output, fetched by the Pi
+├── bin-led-scraper/       ← weekly GitHub Actions scraper (headless browser)
+│   ├── scrape_bins.py
+│   ├── requirements.txt
+│   └── data/
+│       └── recycling_schedule.json   ← committed output, fetched by the Pi
+│
+└── .github/workflows/
+    └── scrape-bins.yml    ← weekly cron + workflow_dispatch, runs the scraper
 ```
 
 (`config.json` no longer contains a UPRN — see the config table update below.)
@@ -206,6 +209,27 @@ selectors in `scrape_bins.py` (currently `get_by_label(...)` calls keyed on
 the form's field labels) will need updating, not anything in
 `bin_led_service.py`.
 
+**Form flow** (as verified against the live site, Jul 2026): the fields live
+inside an `<iframe class="achieveforms-iframe">`, not the top-level page, so
+Playwright locators must be scoped via `page.frame_locator(...)`. The
+sequence is: fill postcode → press Enter → select an address from the
+populated dropdown → click the **"Find collection dates"** button that
+appears once an address is selected. The schedule lookup
+(`POST /apibroker/runLookup` whose response contains `ScheduledStart`) only
+fires after that button click — selecting the address alone does nothing.
+This exact step was missing from the first implementation and is the most
+likely thing to silently break again if the council adjusts the form.
+
+**Debugging the scraper against the live site:** this repo is public, so
+GitHub Actions logs and artifacts are publicly visible — never print or
+commit real postcode/UPRN/address data to them. Reproduce issues locally
+instead, with a throwaway postcode anywhere in the East Cambridgeshire
+district and whichever address the dropdown happens to offer; the form's
+behaviour doesn't depend on which real address is used. If diagnostics ever
+need to run in CI itself, keep them boolean/count-only (e.g. "did the
+selection match", "is the button visible") rather than printing the actual
+values.
+
 ---
 
 ## Error handling
@@ -221,10 +245,30 @@ the form's field labels) will need updating, not anything in
 
 ### Deployment workflow
 
-1. Edit files locally or in Claude Code
-2. SFTP to `europa` — files transferred via SFTP lose the execute bit; run
-   `chmod +x` on any shell scripts after transfer
-3. SSH in and use `manage.sh` to restart services
+`europa` has this repo cloned at `~/blinkt-projects/bin-led-reminder` with
+`origin` pointing at this GitHub repo. Deployment is `git pull`, not SFTP —
+git preserves file modes, so pulled shell scripts keep their execute bit
+(unlike files copied over SFTP).
+
+1. Edit files locally or in Claude Code, commit, and push to `main`
+2. SSH into `europa` and run:
+   ```bash
+   git -C ~/blinkt-projects/bin-led-reminder pull
+   ```
+   If this refuses with "local changes would be overwritten," something was
+   edited directly on the Pi (or copied over some other way) since the last
+   pull — `git stash` before pulling rather than discarding blind, then
+   inspect the stash (`git stash show -p`) before dropping it.
+3. Use `manage.sh` to restart whichever service(s) changed. `bin-led-reminder`
+   and `bin-led-webui` must be redeployed and restarted **together** whenever
+   either changes — the web UI's bin-type matching and colour palette have to
+   stay in sync with the LED service's taxonomy (see Colour constants above).
+
+This git clone can silently drift out of sync for months if `git pull` isn't
+run regularly (deploys are on-demand, not scheduled) — if the Pi's behaviour
+doesn't match what's on `main`, check `git status` and `git log -1` in
+`~/blinkt-projects/bin-led-reminder` before assuming the code is what you
+think it is.
 
 ### Development environment
 
@@ -309,6 +353,12 @@ is slow and can OOM on the Pi Zero 2.
   hardcoded-ignored. An `ignore_outdoor_food_caddy` config flag (default
   `true`) would make the project usable for other councils or households that
   want the reminder.
+- **Automated deployment** — `git pull` on `europa` is manual today, with no
+  cron/systemd timer triggering it. The Pi's clone has drifted months behind
+  `main` before (caught during the Jul 2026 AchieveForms migration) purely
+  because nobody happened to SSH in and pull. An auto-pull timer would close
+  this gap but needs a decision on restart safety (e.g. don't restart
+  mid-reminder-window) before being built.
 - **Scraper resilience + health check API** — add a `GET /api/health` endpoint
   that reports scraper health: last successful scrape timestamp, row count
   returned, and whether it fell below a minimum threshold. A canary assertion
