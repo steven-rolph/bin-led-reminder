@@ -5,7 +5,6 @@ Smart visual reminder for bin collection days using Blinkt! LEDs
 """
 
 import requests
-from bs4 import BeautifulSoup
 import json
 import time
 import signal
@@ -31,9 +30,8 @@ class BinLEDService:
     def load_config(self, config_file):
         """Load configuration from JSON file"""
         default_config = {
-            "uprn": "REDACTED",
-            "base_url": "https://self.eastcambs.gov.uk/appshost/firmstep/self/apps/custompage/bincollections",
-            "update_interval_weeks": 2,
+            "base_url": "https://raw.githubusercontent.com/steven-rolph/bin-led-reminder/main/bin-led-scraper/data/recycling_schedule.json",
+            "update_interval_weeks": 1,
             "check_interval_hours": 1,
             "led_brightness": 0.1,
             "log_level": "INFO",
@@ -73,103 +71,32 @@ class BinLEDService:
 
         self.logger = logging.getLogger(__name__)
 
-    def get_url(self):
-        """Build the scraping URL"""
-        return f"{self.config['base_url']}?language=en&uprn={self.config['uprn']}"
-
-    def fetch_data(self, retry_attempts=3, delay=2):
-        """Fetch webpage with retry logic"""
-        url = self.get_url()
+    def fetch_schedule_data(self, retry_attempts=3, delay=2):
+        """Fetch the pre-scraped schedule JSON from base_url, with retry logic"""
+        url = self.config['base_url']
 
         for attempt in range(retry_attempts):
             try:
-                headers = {
-                    'User-Agent': (
-                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                        'AppleWebKit/537.36 (KHTML, like Gecko) '
-                        'Chrome/120.0.0.0 Safari/537.36'
-                    )
-                }
-                response = requests.get(url, headers=headers, timeout=10)
+                response = requests.get(url, timeout=10)
                 response.raise_for_status()
-                return response
-            except requests.RequestException as e:
+                data = response.json()
+                if not data.get('collections'):
+                    raise ValueError("Fetched schedule has no collections")
+                return data
+            except (requests.RequestException, ValueError) as e:
                 self.logger.warning(f"Fetch attempt {attempt + 1} failed: {e}")
                 if attempt < retry_attempts - 1:
                     time.sleep(delay)
                 else:
                     raise
 
-    def parse_date(self, date_str):
-        """Parse date string into datetime object"""
-        try:
-            # Handle format like "Wed - 23 Jul 2025"
-            date_part = date_str.split(' - ')[1] if ' - ' in date_str else date_str
-            return datetime.strptime(date_part, "%d %b %Y")
-        except (ValueError, IndexError) as e:
-            self.logger.warning(f"Could not parse date '{date_str}': {e}")
-            return None
-
-    def scrape_collections(self):
-        """Scrape bin collection data from the website"""
-        self.logger.info("Fetching collection data...")
-
-        try:
-            response = self.fetch_data()
-            soup = BeautifulSoup(response.content, 'html.parser')
-
-            bins_data = []
-            collection_rows = soup.select('.collectionsrow')
-
-            # Skip the first row if it's the address selector (has iframe)
-            collection_rows = [row for row in collection_rows if not row.find('iframe')]
-
-            for row in collection_rows:
-                bin_type_elem = row.select_one('.col-sm-4, .col-xs-4')
-                date_elem = row.select_one('.col-sm-6, .col-xs-6')
-
-                if bin_type_elem and date_elem:
-                    bin_type = bin_type_elem.text.strip()
-                    date_str = date_elem.text.strip()
-                    date_obj = self.parse_date(date_str)
-
-                    if date_obj:
-                        bins_data.append({
-                            'date': date_str,
-                            'date_parsed': date_obj.isoformat(),
-                            'bin_type': bin_type,
-                            'day_of_week': date_obj.strftime('%A'),
-                        })
-
-            if not bins_data:
-                raise Exception("No collection data found")
-
-            # Sort by date
-            bins_data.sort(key=lambda x: x['date_parsed'])
-
-            self.logger.info(f"Successfully scraped {len(bins_data)} collection entries")
-            return bins_data
-
-        except Exception as e:
-            self.logger.error(f"Error scraping data: {e}")
-            raise
-
-    def save_data(self, bins_data):
-        """Save collection data to JSON file"""
-        metadata = {
-            'last_updated': datetime.now().isoformat(),
-            'uprn': self.config['uprn'],
-            'source_url': self.get_url(),
-            'total_collections': len(bins_data)
-        }
-
-        output_data = {
-            'metadata': metadata,
-            'collections': bins_data
-        }
-
+    def save_data(self, data):
+        """Persist fetched schedule data to disk, preserving its own metadata
+        (in particular metadata.last_updated, which is set by the external
+        scraper and drives the staleness indicator — see
+        docs/superpowers/specs/2026-07-25-council-endpoint-migration-design.md)."""
         with open(self.data_file, 'w') as f:
-            json.dump(output_data, f, indent=2, default=str)
+            json.dump(data, f, indent=2, default=str)
 
         self.logger.info(f"Data saved to {self.data_file}")
 
@@ -400,9 +327,9 @@ class BinLEDService:
             try:
                 # Check if data update is needed
                 if self.should_update_data():
-                    self.logger.info("Data update needed - scraping new data")
-                    bins_data = self.scrape_collections()
-                    self.save_data(bins_data)
+                    self.logger.info("Data update needed - fetching new schedule")
+                    data = self.fetch_schedule_data()
+                    self.save_data(data)
                     self.clear_error_state()  # Clear any previous errors
 
                 # Update LED display

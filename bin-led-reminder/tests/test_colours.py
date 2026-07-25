@@ -5,6 +5,7 @@ Run with: python -m pytest tests/test_colours.py -v
 Mocks blinkt so the suite runs on any machine, not just the Pi.
 """
 
+import json
 import logging
 import pathlib
 import sys
@@ -234,6 +235,55 @@ def test_three_bins_due_with_unrecognised_third_bin_still_splits_leds(caplog):
         c == call(*COLOUR_ERROR, 0.1) for c in _blinkt.set_all.call_args_list
     )
     assert 'dropped' in caplog.text.lower()
+
+
+def test_fetch_schedule_data_returns_parsed_json():
+    from bin_led_service import BinLEDService
+    service = BinLEDService.__new__(BinLEDService)
+    service.config = {'base_url': 'https://example.invalid/recycling_schedule.json'}
+    service.logger = logging.getLogger('test')
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        'metadata': {'last_updated': '2026-07-20T06:00:00', 'total_collections': 1},
+        'collections': [{
+            'date': 'Thu - 30 Jul 2026',
+            'date_parsed': '2026-07-30T00:00:00',
+            'bin_type': 'GARDEN WASTE BIN',
+            'day_of_week': 'Thursday',
+        }],
+    }
+    mock_response.raise_for_status.return_value = None
+
+    with patch('bin_led_service.requests.get', return_value=mock_response) as mock_get:
+        data = service.fetch_schedule_data()
+
+    mock_get.assert_called_once()
+    assert mock_get.call_args.args[0] == 'https://example.invalid/recycling_schedule.json'
+    assert data['metadata']['last_updated'] == '2026-07-20T06:00:00'
+    assert data['collections'][0]['bin_type'] == 'GARDEN WASTE BIN'
+
+
+def test_save_data_preserves_fetched_metadata(tmp_path):
+    from bin_led_service import BinLEDService
+    service = BinLEDService.__new__(BinLEDService)
+    service.data_file = tmp_path / 'recycling_schedule.json'
+    service.logger = logging.getLogger('test')
+
+    fetched = {
+        'metadata': {'last_updated': '2026-07-20T06:00:00', 'total_collections': 1},
+        'collections': [{
+            'date': 'Thu - 30 Jul 2026',
+            'date_parsed': '2026-07-30T00:00:00',
+            'bin_type': 'GARDEN WASTE BIN',
+            'day_of_week': 'Thursday',
+        }],
+    }
+    service.save_data(fetched)
+
+    saved = json.loads(service.data_file.read_text())
+    assert saved['metadata']['last_updated'] == '2026-07-20T06:00:00'
+    assert saved['collections'][0]['bin_type'] == 'GARDEN WASTE BIN'
 
 
 def test_leds_off_outside_reminder_window():
