@@ -1,22 +1,10 @@
 {
   "metadata": {
-    "last_updated": "2026-08-17T06:29:01.323802",
+    "last_updated": "2026-08-24T06:32:50.847713",
     "total_collections": 15
   },
   "collections": [
     {
-      "date": "Thu - 20 Aug 2026",
-      "date_parsed": "2026-08-20T00:00:00",
-      "bin_type": "OUTDOOR FOOD CADDY",
-      "day_of_week": "Thursday"
-    },
-    {
-      "date": "Thu - 20 Aug 2026",
-      "date_parsed": "2026-08-20T00:00:00",
-      "bin_type": "RECYCLING BIN - 240L",
-      "day_of_week": "Thursday"
-    },
-    {
       "date": "Thu - 27 Aug 2026",
       "date_parsed": "2026-08-27T00:00:00",
       "bin_type": "OUTDOOR FOOD CADDY",
@@ -92,6 +80,18 @@
       "date": "Thu - 24 Sep 2026",
       "date_parsed": "2026-09-24T00:00:00",
       "bin_type": "GARDEN WASTE BIN",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 01 Oct 2026",
+      "date_parsed": "2026-10-01T00:00:00",
+      "bin_type": "OUTDOOR FOOD CADDY",
+      "day_of_week": "Thursday"
+    },
+    {
+      "date": "Thu - 01 Oct 2026",
+      "date_parsed": "2026-10-01T00:00:00",
+      "bin_type": "RECYCLING BIN - 240L",
       "day_of_week": "Thursday"
     }
   ]
